@@ -9,6 +9,8 @@ import { basePaint, buildStyle, layerVisibility, satelliteSource, skyFor } from 
 import { installCameraControls } from './controls';
 import { readCamera } from './camera';
 import { setMap } from './mapInstance';
+import { installShadowLayer } from './shadowLayer';
+import { writeTimeToUrl } from '../store/urlTime';
 
 // MapLibre 6 looks for its worker next to its own bundle, which Vite moves. The
 // helios-maplibre-worker plugin in vite.config.ts serves the original files here instead.
@@ -91,9 +93,16 @@ export function MapView() {
     map.on('idle', publishCamera);
     map.once('load', publishCamera);
 
+    let removeShadows = () => {};
+    map.once('load', () => {
+      removeShadows = installShadowLayer(map, 'contour-minor');
+    });
+    writeTimeToUrl(s.time);
+
     // Store -> map. The style is built once; switching bases only flips layer visibility,
     // so later custom layers (shadows, sun) survive a base change.
     const unsubscribe = useApp.subscribe((now, prev) => {
+      if (now.time !== prev.time) writeTimeToUrl(now.time);
       if (now.pin !== prev.pin) {
         pin.setLngLat([now.pin.lng, now.pin.lat]);
         setPinLabel(now.pin.name);
@@ -129,6 +138,7 @@ export function MapView() {
 
     return () => {
       unsubscribe();
+      removeShadows();
       removeControls();
       cancelAnimationFrame(raf);
       setMap(null);

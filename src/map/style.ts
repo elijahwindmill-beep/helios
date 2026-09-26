@@ -14,6 +14,7 @@ import {
 
 export type BaseLayer = 'satellite' | 'paper' | 'terrain';
 export interface Overlays {
+  shadows: boolean;
   contours: boolean;
   labels: boolean;
 }
@@ -50,6 +51,8 @@ const BASE_GROUPS: Record<string, BaseLayer[]> = {
 };
 
 const OVERLAY_GROUPS: Record<string, keyof Overlays> = {
+  // Added at runtime by shadowLayer.ts once elevation has loaded.
+  shadows: 'shadows',
   'contour-minor': 'contours',
   'contour-major': 'contours',
   'contour-label': 'contours',
