@@ -7,6 +7,8 @@
 
 Shadow casting map for scheduling and planning trips and photography. Scout sun and shadow on real 3D terrain, then turn it into keyframed clips and export them as video.
 
+The mark is a horizon line through a cut stone under the sun; the HELIOS wordmark is drawn as single strokes, like the engraved lettering on the Soviet Helios-44 lens (no font file).
+
 **Live app:** https://elijahwindmill-beep.github.io/helios/
 
 Default location: Seceda ridgeline, Val Gardena (46.60068, 11.72598).
@@ -20,7 +22,7 @@ Default location: Seceda ridgeline, Val Gardena (46.60068, 11.72598).
 | 3 | Compass ring, sun paths, solstice paths, draggable sun | Done |
 | 4 | Routes (GPX/KML/GeoJSON), places, geotagged photos | Done |
 | 5 | Keyframes, clips, timeline, playback, video export, sun-hours heatmap, South Tyrol aerial imagery | Done |
-| 6 | Paper (light) theme toggle, South Tyrol LiDAR terrain (needs a tile server), optional Google 3D tiles, performance modes | Next |
+| 6 | Detailed LiDAR terrain (Mapterhorn) with close-up shadows, performance modes, light Paper theme, optional Google 3D tiles, new logo | Done |
 
 The full build brief is in [PROMPT.md](PROMPT.md).
 
@@ -82,12 +84,19 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 - **Weather** (in the alerts; on a phone under the solstice buttons): the forecast at the pin for the chosen time, from MET Norway: sky, temperature, wind, and rain or snow when there is some. Hourly for the next 2 to 3 days, then in 6-hour blocks, up to about 9 days ahead. Past times and dates further out say so instead of guessing.
 - **Weather warning** (phone): a small dark note floats at the top when the forecast is poor for light and shadows (overcast, fog, rain, sleet, snow, thunder, or wind from 39 km/h), e.g. "Overcast at 08:00 · shadows won't show". × hides it for that forecast slot.
 - **Sun hours (whole day)** (layer panel): a heatmap of how many hours of direct sun each spot gets on the viewed day, from deep blue (none) to orange (11+ h). Helios renders the terrain shadows every 10 minutes from sunrise to sunset and adds them up, so it takes a few seconds; it updates when you change the day or move the pin, and stands in for the cast shadows while on.
-- **Cast shadows** (layer panel) shows where the terrain blocks the sun. Quality: Low, Medium (default), High. High loads more detailed elevation and takes longer to draw.
+- **Cast shadows** (layer panel) shows where the terrain blocks the sun. With the detailed elevation (see Settings), a sharper close-up layer covers about 2 km around the view centre (3 km on Detailed) from 1.6 m elevation where the region has LiDAR, while mountains up to 12 km away still cast into it.
 - The relief shading on Paper and Terrain is lit from the real sun direction too.
 - **Golden hour light** (layer panel, on by default): the whole map takes the colour of the real light. Neutral when the sun is high, warming from about 12° down to a deep orange at sunset, then the blue of blue hour (sun 4° to 6° below the horizon) and a dim blue night. Shadows cool toward sky blue as the sun gets low, like real shadows lit by the sky. It's drawn into the map image itself, so video export will include it; labels stay neutral. Turn it off for a plain scouting view.
 
 - **Clear map:** the small arrow tabs at the middle of each screen edge slide that side's controls away (left: layer panel, right: alerts and map buttons, top: top bar and forecast, bottom: sun chart, tools and readout). **H** hides or shows them all. On a phone the frame button above the map buttons clears everything; the eye button brings it back.
 - **Lens look** (layer panel, on by default, with a strength slider): the look of a vintage lens. Soft red/blue fringes on edges, a tilt-shift blur toward the top and bottom, lens dirt that glows near the sun, dust specks and a little frost in the corners are drawn into the map image (so video export will carry them); a slight vignette, a 12 px blur feathering in over the last 140 px toward the screen edges, a soft blur band along each control window's top and bottom edge, and fine grey film grain cover the whole screen, panels included. It's all measured in screen pixels, so zooming never changes it.
+
+### Settings (foot of the layer panel)
+
+- **Theme:** Dark (the Frost HUD), Light (the Paper palette from the brief: warm paper, ink, amber), or Auto, which follows the system setting.
+- **Performance:** Smooth, Balanced (default) or Detailed. It sets how sharp and far the shadows are, whether the close-up shadows are drawn, the drawing resolution (Smooth draws at normal resolution on high-density screens), the blurs over the panels (Smooth leaves them out) and how detailed the Google 3D tiles get. Try Smooth on a laptop on battery or a phone.
+- **Elevation data:** Detailed (Mapterhorn, the default) or Standard (Mapzen, 30 m). Detailed uses LiDAR wherever a region publishes it: South Tyrol 2.5 m, Austria 1 m, Switzerland, Trentino 5 m, and 30 m (Copernicus) elsewhere. Cliffs, towers and gullies come out sharply, and shadows from small ridges show. Switch to Standard if the detailed tiles are slow or down.
+- **Google 3D tiles** (optional): paste your own Google Maps Platform key (Map Tiles API enabled, with billing) and switch on **Photorealistic 3D** for Google's 3D mesh of buildings, trees and rock faces, with Helios's cast shadows (or sun hours) painted onto it. The key stays in this browser. Google's credits show at the bottom while it's on. It's left out of exported videos, because Google allows only short, clearly marked promotional clips. The 3D renderer (about 1 MB) only downloads the first time you switch it on.
 
 ### Sun in 3D
 
@@ -163,6 +172,10 @@ VITE_MAPTILER_KEY=your-key-here
 
 `.env.local` is ignored by git, so the key never gets committed. Don't add it to the GitHub build: anything starting with `VITE_` ends up inside the published site.
 
+### Optional: Google 3D tiles key
+
+Create a key in Google Cloud with the **Map Tiles API** enabled and billing set up, then paste it under Settings → Google 3D tiles. For local development it can go in `.env.local` as `VITE_GOOGLE_MAPS_KEY=...` (same rules as above: never in the GitHub build). Restrict the key to your site's address in Google Cloud.
+
 ## Deploying
 
 Every push to `main` builds the site and publishes it to GitHub Pages (see `.github/workflows/pages.yml`). One-time setup: in the repo on GitHub, open **Settings → Pages** and set **Source** to **GitHub Actions**.
@@ -173,7 +186,8 @@ Helios is made for monetised videos, so each source's commercial terms matter. T
 
 | Source | Used for | Licence | Paid work? |
 |---|---|---|---|
-| [Mapzen Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) (Terrarium, AWS Open Data) | 3D terrain, contours, hillshade | Mixed open licences, [attribution required](https://github.com/tilezen/joerd/blob/master/docs/attribution.md) | Yes |
+| [Mapterhorn](https://mapterhorn.com/attribution) terrain tiles | Detailed elevation (default): 3D terrain, shadows, contours, hillshade. Sources include South Tyrol DGM 2.5 m (CC0), BEV Austria 1 m (CC BY 4.0), swisstopo, Trentino, Copernicus GLO-30 | Open data from each producer, attribution required ([full list](https://mapterhorn.com/attribution)) | Yes, with attribution |
+| [Mapzen Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) (Terrarium, AWS Open Data) | Standard elevation (fallback choice) | Mixed open licences, [attribution required](https://github.com/tilezen/joerd/blob/master/docs/attribution.md) | Yes |
 | [OpenFreeMap](https://openfreemap.org) (OpenMapTiles schema) | Water, roads, lifts, names | © OpenStreetMap contributors (ODbL), © OpenMapTiles | Yes |
 | [Nominatim](https://operations.osmfoundation.org/policies/nominatim/) | Place search | ODbL data; max 1 request per second | Yes (light use) |
 | [Wikimedia Commons](https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia) | Photo spots | Each photo has its own free licence (mostly CC BY / BY-SA), shown and linked with the photo; credit the author when you reuse one | Yes, with credit (and share-alike where the licence says so) |
@@ -182,22 +196,24 @@ Helios is made for monetised videos, so each source's commercial terms matter. T
 | [South Tyrol orthophoto 2023](https://data.civis.bz.it/) (Autonomous Province of Bolzano) | Aerial imagery, ~20 cm, South Tyrol only | CC0 | Yes |
 | [EOX Sentinel-2 cloudless 2016](https://cloudless.eox.at) | Satellite (alternative) | Commercial use needs a paid EOX licence | **No**, not as-is |
 | MapTiler Satellite | Satellite (your key) | Your MapTiler plan | Depends on plan |
+| [Google Photorealistic 3D Tiles](https://developers.google.com/maps/documentation/tile/policies) | Optional 3D mesh (your key) | Google Maps Platform terms; Google's credits shown while on | **Not in videos**: left out of exports (Google allows only short promotional clips) |
+| EGM96 geoid (NGA) | Seating Google's 3D tiles at sea-level heights | Public domain | Yes |
 
 Sun position uses NOAA's solar calculator (accurate to about 0.01°). Sunrise and sunset in the sun card are the standard ones: sun centre 0.833° below a flat horizon. At Seceda on 26 Sep 2026 Helios gives 28.2° / 127.2° at 10:06 where Shadowmap shows 28.4° / 127.2°, and sunrise/sunset 07:04 / 19:03 where Shadowmap's slider shows 07:05 / 19:05. Real sunrise at a spot can be later and sunset earlier when mountains block the horizon; the cast shadows show that, the sunrise/sunset numbers don't.
 
 Shadows are computed from the elevation data: for every ground point Helios walks toward the sun and checks whether terrain rises above it, including mountains up to 12 km away and the curvature of the earth. Edges are softened by the width of the sun's disk.
 
-Terrain data is about 30 m resolution: good for large-scale light and shadow on ridges and valleys, too coarse for single rocks or buildings. South Tyrol publishes 0.5 m LiDAR elevation (CC0), but its map service only serves it as pre-lit hillshade pictures, not heights, so it can't drive the 3D terrain or shadows in the browser; using it would need the raw files turned into elevation tiles on a server (a phase 6 option). Its 20 cm 2023 aerial photos are available as an imagery choice.
+Terrain detail depends on the region. With the default detailed elevation (Mapterhorn), South Tyrol is 2.5 m (the province's DGM, CC0), Austria 1 m, Switzerland and several Italian regions 0.5 to 5 m, and the rest of the world 30 m (Copernicus). That's enough for towers, gullies and small ridges, not for single trees or buildings (the optional Google 3D tiles show those, but their shadows aren't computed: the painted shadows come from the terrain). South Tyrol's own 0.5 m LiDAR is only published as pre-lit pictures, so 2.5 m is the finest usable there without running a tile server. Its 20 cm 2023 aerial photos are available as an imagery choice.
 
-Fonts: Barlow and Barlow Condensed (SIL Open Font License), loaded from Google Fonts.
+Fonts: Barlow and Barlow Condensed (SIL Open Font License), loaded from Google Fonts. The logo lettering is drawn in SVG, not a font.
 
-Libraries: MapLibre GL JS (BSD-3), maplibre-contour (BSD-3), React (MIT), Zustand (MIT), @photostructure/tz-lookup (CC0, timezone from coordinates), @tmcw/togeojson (BSD-2, GPX and KML import), exifr (MIT, photo GPS and capture time). Tests only: Vitest (MIT), happy-dom (MIT).
+Libraries: MapLibre GL JS (BSD-3), maplibre-contour (BSD-3), React (MIT), Zustand (MIT), @photostructure/tz-lookup (CC0, timezone from coordinates), @tmcw/togeojson (BSD-2, GPX and KML import), exifr (MIT, photo GPS and capture time), Mediabunny (MPL-2.0, MP4 export), three.js (MIT) and 3d-tiles-renderer (Apache-2.0) for the optional Google 3D tiles (loaded only when switched on). Tests only: Vitest (MIT), happy-dom (MIT).
 
 ## Project layout
 
 ```
 src/
-  map/     MapLibre setup, style and base layers, camera controls, tile sources, shadow layer
+  map/     MapLibre setup, style and base layers, camera controls, tile and elevation sources, shadow layer, performance modes, optional Google 3D tiles
   scene/   3D sun scene: compass ring, sun paths, sun, labels, dragging; golden/blue hour light colour; lens look
   sun/     sun position, sunrise and sunset, seasons, timezones, inverse solver for dragging
   terrain/ elevation tiles, height mosaic, shadow ray-march (CPU reference and GPU shader)

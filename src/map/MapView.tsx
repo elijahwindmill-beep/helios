@@ -12,6 +12,7 @@ import { installTouchControls } from './touchControls';
 import { readCamera } from './camera';
 import { setMap } from './mapInstance';
 import { installShadowLayer } from './shadowLayer';
+import { installGoogle3d } from './google3d';
 import { installSunScene } from '../scene/sunScene';
 import { installLightColour } from '../scene/lightColour';
 import { installUserLayers } from '../layers/userLayers';
@@ -159,10 +160,13 @@ export function MapView() {
     let removeUser = () => {};
     let removeLens = () => {};
     let removeSpots = () => {};
+    let removeGoogle = () => {};
     map.once('load', () => {
       removeShadows = installShadowLayer(map, 'contour-minor');
       // Under the labels so they keep their colour.
       removeLight = installLightColour(map, 'contour-label');
+      // Google 3D tiles (optional): under the golden-hour colour, so they take it too.
+      removeGoogle = installGoogle3d(map, 'light-colour');
       // Above the light colour and contours, under the labels: routes keep their own colours.
       removeUser = installUserLayers(map, 'contour-label');
       removeSpots = installPhotoSpots(map, 'contour-label');
@@ -239,6 +243,7 @@ export function MapView() {
       removeUser();
       removeLens();
       removeSpots();
+      removeGoogle();
       removeControls();
       cancelAnimationFrame(raf);
       setMap(null);

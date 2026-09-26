@@ -172,6 +172,18 @@ export const DATA_SOURCES = [
     url: 'https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia',
   },
   {
+    name: 'Google Photorealistic 3D Tiles (optional, your key)',
+    use: '3D buildings, trees and rock with photo texture, when switched on in Settings',
+    licence: "Google Maps Platform terms: Google's credits shown while on; not in exported videos (Google allows only short promotional clips)",
+    url: 'https://developers.google.com/maps/documentation/tile/policies',
+  },
+  {
+    name: 'EGM96 geoid (NGA)',
+    use: 'Sea level versus the ellipsoid, to seat the Google 3D tiles on the terrain',
+    licence: 'Public domain',
+    url: 'https://earth-info.nga.mil/',
+  },
+  {
     name: 'Nominatim (OpenStreetMap)',
     use: 'Place search',
     licence: 'ODbL data; usage policy of max 1 request per second, no bulk use',

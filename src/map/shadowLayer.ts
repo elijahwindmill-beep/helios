@@ -13,6 +13,7 @@ import { timeZoneAt } from '../sun/timezone';
 import { addLight, hoursPixels } from '../terrain/sunHours';
 
 const HOURS_SOURCE = 'sun-hours';
+const HOURS_OPACITY = 0.72;
 /** Sun positions sampled across the day for the heatmap. */
 const HOURS_STEP_MS = 10 * 60000;
 
@@ -50,6 +51,15 @@ const SKY_FILL: [number, number, number] = [0.12, 0.26, 0.62];
 // For the video export: true while the shadows are still catching up with the view or time.
 let busy = () => false;
 export const shadowsBusy = () => busy();
+
+/** A drawn shadow (or sun-hours) image and the area it covers. */
+export interface ShadowImage {
+  canvas: HTMLCanvasElement;
+  bounds: Bounds;
+  opacity: number;
+}
+/** The latest images as the map shows them, for the Google 3D tiles to paint on their mesh. */
+export const shadowImages: { wide: ShadowImage | null; detail: ShadowImage | null; version: number } = { wide: null, detail: null, version: 0 };
 
 export function installShadowLayer(map: MlMap, beforeLayer: string): () => void {
   let renderer: ShadowRenderer;
@@ -136,10 +146,26 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
     ms += renderer.render({ ...common, steps: perf.shadows.steps, hole: close });
     renderer.copyTo(wideCanvas);
     refreshSource(SOURCE);
+    publish();
     if (s.shadowStatus.state !== 'loading') s.setShadowStatus({ state: 'idle', renderMs: ms });
   };
   const requestDraw = () => {
     if (!frame) frame = requestAnimationFrame(draw);
+  };
+
+  let hoursRange: TileRange | null = null;
+  const publish = () => {
+    const o = useApp.getState().overlays;
+    if (o.sunHours && hoursRange) {
+      shadowImages.wide = { canvas: hoursCanvas, bounds: rangeBounds(hoursRange), opacity: HOURS_OPACITY };
+      shadowImages.detail = null;
+    } else if (o.shadows && mosaic) {
+      shadowImages.wide = { canvas: wideCanvas, bounds: rangeBounds(mosaic), opacity: 1 };
+      shadowImages.detail = detail ? { canvas: detailCanvas, bounds: rangeBounds(detail), opacity: 1 } : null;
+    } else {
+      shadowImages.wide = shadowImages.detail = null;
+    }
+    shadowImages.version++;
   };
 
   const addLayer = (id: string, canvas: HTMLCanvasElement, m: Mosaic) => {
@@ -358,7 +384,7 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
     else {
       map.addSource(HOURS_SOURCE, { type: 'canvas', canvas: hoursCanvas, coordinates: corners(m), animate: false });
       map.addLayer(
-        { id: HOURS_SOURCE, type: 'raster', source: HOURS_SOURCE, layout: { visibility: 'visible' }, paint: { 'raster-fade-duration': 0, 'raster-opacity': 0.72 } },
+        { id: HOURS_SOURCE, type: 'raster', source: HOURS_SOURCE, layout: { visibility: 'visible' }, paint: { 'raster-fade-duration': 0, 'raster-opacity': HOURS_OPACITY } },
         map.getLayer(beforeLayer) ? beforeLayer : undefined,
       );
     }
@@ -372,6 +398,8 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
     };
     map.on('render', onRender);
     map.triggerRepaint();
+    hoursRange = m;
+    publish();
     useSunHours.setState({ state: 'idle', progress: 1, max });
   };
   const scheduleHours = () => {
@@ -417,6 +445,7 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
       hoursJob++;
       void refreshDetail();
     }
+    if (now.overlays.shadows !== prev.overlays.shadows || now.overlays.sunHours !== prev.overlays.sunHours) publish();
     if (now.elevation !== prev.elevation) {
       setElevationProvider(ELEVATION[now.elevation]);
       reload();

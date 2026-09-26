@@ -53,7 +53,10 @@ export function ExportDialog() {
                 </button>
               ))}
             </div>
-            <p className="muted export-note">The map, shadows, sun scene and lens look are in the video; pins and photo markers aren't.</p>
+            <p className="muted export-note">
+              The map, shadows, sun scene and lens look are in the video; pins and photo markers aren't. Google 3D tiles are left out too: Google allows them only in short
+              promotional clips.
+            </p>
             <div className="export-actions">
               <button className="chip" onClick={ex.close}>
                 Cancel

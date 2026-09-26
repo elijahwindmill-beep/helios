@@ -1323,6 +1323,26 @@ input.sun-date {
   color: var(--warn);
 }
 
+/* ---------- Google 3D tiles credits (required by Google while they show) ---------- */
+.google-credits {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  max-width: min(640px, calc(100% - 32px));
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: rgba(var(--glass-rgb), 0.72);
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.35;
+  pointer-events: none;
+  z-index: 3;
+}
+.google-credits:empty {
+  display: none;
+}
+
 /* ---------- Settings (foot of the layer panel) ---------- */
 .settings {
   margin-top: 14px;
