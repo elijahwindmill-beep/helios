@@ -4,6 +4,7 @@ import { getMap } from '../map/mapInstance';
 import { lightWindows, useSun } from '../sun/useSun';
 import { formatClock, formatDate, formatOffset } from '../sun/timezone';
 import { useWeather } from '../weather/useWeather';
+import { Logo } from './Logo';
 import { NowButton, TypedField, useTimeControls } from './timeControls';
 
 /** Ground height at the pin from the terrain, once it has loaded. */
@@ -56,11 +57,7 @@ export function TopBar() {
   return (
     <header className="panel top-bar" aria-label="Sun and time">
       <div className="brand">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.4" strokeLinecap="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="4.2" />
-          <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" />
-        </svg>
-        <span className="brand-name">Helios</span>
+        <Logo height={24} />
       </div>
       <div className="top-cell top-place">
         <span className="hud-label">Location</span>

@@ -1798,12 +1798,18 @@ input.sun-date {
   gap: 9px;
   padding-right: 14px;
 }
-.brand-name {
-  font-family: var(--font-hud);
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink);
+}
+.logo svg {
+  display: block;
+  overflow: visible;
+}
+.panel-logo {
+  margin: 4px 0 2px;
 }
 .top-cell {
   display: flex;

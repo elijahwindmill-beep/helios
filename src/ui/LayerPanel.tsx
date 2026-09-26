@@ -8,6 +8,7 @@ import { SearchBar } from './SearchBar';
 import { useSpots } from '../store/spots';
 import { useSunHours } from '../store/sunHours';
 import { HOURS_STOPS } from '../terrain/sunHours';
+import { Logo } from './Logo';
 
 const BASES: Array<{ id: BaseLayer; label: string }> = [
   { id: 'satellite', label: 'Satellite' },
@@ -66,7 +67,9 @@ export function LayerPanel() {
       )}
       {narrow ? (
         <>
-          <h1 className="title">Helios</h1>
+          <h1 className="title panel-logo">
+            <Logo height={26} />
+          </h1>
           <p className="subtitle">Sun and shadow scout</p>
         </>
       ) : (

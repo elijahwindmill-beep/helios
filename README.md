@@ -1,6 +1,11 @@
-# Helios
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="design/logo/helios-dark.svg" />
+    <img src="design/logo/helios-light.svg" alt="Helios" width="300" height="70" />
+  </picture>
+</h1>
 
-Shadow casting map for scheduling and planning trips and photography. Scout sun and shadow on real 3D terrain, then (soon) turn it into keyframed clips for video.
+Shadow casting map for scheduling and planning trips and photography. Scout sun and shadow on real 3D terrain, then turn it into keyframed clips and export them as video.
 
 **Live app:** https://elijahwindmill-beep.github.io/helios/
 
