@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../store/app';
 import { getMap } from '../map/mapInstance';
 import { parseLatLng } from '../map/cameraMath';
+import { useLayers } from '../store/layers';
 
 interface Result {
   name: string;
@@ -76,10 +77,27 @@ export function SearchBar() {
         <div className="panel search-results" role="listbox" aria-label="Search results">
           {status && <p className="search-status">{status}</p>}
           {results?.map((r, i) => (
-            <button key={i} role="option" aria-selected={false} onClick={() => go(r)}>
-              <span className="result-name">{r.name}</span>
-              <span className="result-detail">{r.detail}</span>
-            </button>
+            <div key={i} className="result-row">
+              <button role="option" aria-selected={false} onClick={() => go(r)}>
+                <span className="result-name">{r.name}</span>
+                <span className="result-detail">{r.detail}</span>
+              </button>
+              <button
+                className="result-save"
+                aria-label={`Save ${r.name} as a place`}
+                title="Save as a place"
+                onClick={() => {
+                  useLayers.getState().addPlaces([{ name: r.name, notes: r.detail, lat: r.lat, lng: r.lng }]);
+                  if (!useApp.getState().overlays.places) useApp.getState().toggleOverlay('places');
+                  go(r);
+                  useLayers.getState().setNotice(`Saved ${r.name} as a place`);
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </button>
+            </div>
           ))}
         </div>
       )}

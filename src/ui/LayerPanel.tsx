@@ -3,6 +3,7 @@ import { IMAGERY, IMAGERY_ORDER } from '../map/sources';
 import type { BaseLayer, Overlays } from '../map/style';
 import { CameraReadout } from './CameraReadout';
 import { useNarrow } from './useMedia';
+import { MyLayers } from './MyLayers';
 
 const BASES: Array<{ id: BaseLayer; label: string }> = [
   { id: 'satellite', label: 'Satellite' },
@@ -12,6 +13,9 @@ const BASES: Array<{ id: BaseLayer; label: string }> = [
 
 const OVERLAYS: Array<{ id: keyof Overlays; label: string; swatch: string }> = [
   { id: 'shadows', label: 'Cast shadows', swatch: '#3B4A5A' },
+  { id: 'routes', label: 'Routes', swatch: '#5B8DEF' },
+  { id: 'places', label: 'Places', swatch: '#1F1D1A' },
+  { id: 'photos', label: 'Photos', swatch: '#C98A0F' },
   { id: 'sunPath', label: 'Sun path', swatch: '#E8A317' },
   { id: 'solstices', label: 'Solstice paths', swatch: '#BDB6A5' },
   { id: 'compass', label: 'Compass ring', swatch: '#6B665C' },
@@ -124,6 +128,8 @@ export function LayerPanel() {
           </p>
         </div>
       )}
+
+      <MyLayers />
 
       {narrow && (
         <>

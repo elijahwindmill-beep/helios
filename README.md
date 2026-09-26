@@ -13,8 +13,8 @@ Default location: Seceda ridgeline, Val Gardena (46.60068, 11.72598).
 | 1 | 3D terrain, Satellite / Paper / Terrain bases, mouse controls, camera readout, search | Done |
 | 2 | Sun position, cast terrain shadows, time and date sliders, sun-arc scrubber | Done |
 | 3 | Compass ring, sun paths, solstice paths, draggable sun | Done |
-| 4 | Routes (GPX/KML/GeoJSON), places, geotagged photos | Next (after the white-balance task) |
-| 5 | Keyframes, clips, timeline, playback, video export | |
+| 4 | Routes (GPX/KML/GeoJSON), places, geotagged photos | Done |
+| 5 | Keyframes, clips, timeline, playback, video export | Next |
 | 6 | Alpenglow dark theme, sun-hours heatmap, South Tyrol LiDAR, extras | |
 
 The full build brief is in [PROMPT.md](PROMPT.md).
@@ -88,6 +88,16 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 - The ring badges show when the sun centre crosses a flat horizon (like Shadowmap's badges), so they are a few minutes inside the sunrise/sunset times in the sun card.
 - The time is part of the page link (`&t=…` in UTC), so a shared link opens at the same moment.
 
+### Your routes, places and photos
+
+In the layer panel under **Your layers** (on a phone: the Layers button):
+
+- **Import…** or drop files anywhere on the map: GPX, KML and GeoJSON routes, and photos (JPEG or HEIC). The map zooms to what you added. Waypoints and points in the files become places.
+- **Routes:** each gets its own colour; click the dot to change it, click the name to rename. **Draw route** lets you click points on the map; double-click, Enter or **Done** finishes, Backspace undoes the last point, Esc cancels. On a phone: tap points, then Done.
+- **Places:** pins with a name and notes. **Place at pin** saves the sun pin's spot; the **+** next to a search result saves that result. Click a place on the map for its notes and **Move sun pin here**. Drag it to move it.
+- **Photos:** placed from the GPS in the photo. A photo without GPS starts at the sun pin; drag it into place. Click a photo to see it full size with when it was taken. **Sun when this was taken** moves the pin and the time to that photo, so you can compare the light. HEIC photos show full size in Safari; other browsers show them as a camera icon.
+- Routes, Places and Photos each have an on/off switch. Everything is kept in this browser (photos in its file storage, not uploaded anywhere).
+
 ### On a phone
 
 | Gesture | To |
@@ -154,7 +164,7 @@ Shadows are computed from the elevation data: for every ground point Helios walk
 
 Terrain data is about 30 m resolution: good for large-scale light and shadow on ridges and valleys, too coarse for single rocks or buildings. A higher-resolution South Tyrol LiDAR option is planned for phase 6.
 
-Libraries: MapLibre GL JS (BSD-3), maplibre-contour (BSD-3), React (MIT), Zustand (MIT), @photostructure/tz-lookup (CC0, timezone from coordinates).
+Libraries: MapLibre GL JS (BSD-3), maplibre-contour (BSD-3), React (MIT), Zustand (MIT), @photostructure/tz-lookup (CC0, timezone from coordinates), @tmcw/togeojson (BSD-2, GPX and KML import), exifr (MIT, photo GPS and capture time). Tests only: Vitest (MIT), happy-dom (MIT).
 
 ## Project layout
 
@@ -165,6 +175,7 @@ src/
   sun/     sun position, sunrise and sunset, seasons, timezones, inverse solver for dragging
   terrain/ elevation tiles, height mosaic, shadow ray-march (CPU reference and GPU shader)
   weather/ MET Norway forecast: fetching, picking the slot for a time, warnings
+  layers/  your routes, places and photos: file import (GPX/KML/GeoJSON, EXIF), map drawing, photo storage
   store/   app state (Zustand), saved in the browser
   ui/      panels, search, readout, theme
 tests/     unit tests

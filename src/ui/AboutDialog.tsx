@@ -68,8 +68,8 @@ export function AboutDialog() {
       </table>
 
       <p className="muted">
-        Map rendering: MapLibre GL JS (BSD-3). Contours: maplibre-contour (BSD-3). Full attribution is shown in the map
-        corner.
+        Map rendering: MapLibre GL JS (BSD-3). Contours: maplibre-contour (BSD-3). GPX and KML import: @tmcw/togeojson
+        (BSD-2). Photo GPS: exifr (MIT). Full attribution is shown in the map corner.
       </p>
 
       <form method="dialog">

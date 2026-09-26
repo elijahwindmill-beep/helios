@@ -274,6 +274,27 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.result-row {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+.result-row > button:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.search-results .result-save {
+  width: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--muted);
+}
+.search-results .result-save:hover {
+  color: var(--ink);
+}
 .search-status {
   margin: 8px 10px;
   font-size: 13px;
@@ -365,6 +386,341 @@ button {
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* ---------- Your layers: markers ---------- */
+.place-marker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.place-dot {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 3.5px solid var(--ink);
+  box-shadow: 0 1px 4px rgba(31, 29, 26, 0.35);
+}
+.place-name {
+  padding: 2px 8px;
+  border-radius: 7px;
+  background: rgba(251, 250, 247, 0.92);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.place-popup strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+.place-popup p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}
+.maplibregl-popup-content {
+  font-family: var(--font-ui);
+  border-radius: 12px;
+  padding: 12px 28px 12px 14px;
+  box-shadow: var(--shadow);
+}
+.photo-marker {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 10px;
+  border: 2px solid var(--surface);
+  background: var(--ink-2);
+  color: var(--surface);
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(31, 29, 26, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.photo-marker img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ---------- Your layers: panel section ---------- */
+.my-layers {
+  margin: 4px 0 12px;
+}
+.my-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.my-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.my-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+.my-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-top: 1px solid var(--hairline-soft);
+}
+.route-color {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.route-color::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.route-color::-webkit-color-swatch {
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--hairline);
+}
+.route-color::-moz-color-swatch {
+  border-radius: 50%;
+}
+.row-name {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+}
+.row-name:hover {
+  border-color: var(--hairline);
+}
+.row-name:focus {
+  outline: 0;
+  border-color: var(--accent-line);
+  background: var(--surface);
+}
+.row-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row-button {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+}
+.row-button:hover {
+  background: var(--surface-sunk);
+  color: var(--ink);
+}
+.row-thumb {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--surface-sunk);
+  color: var(--muted);
+}
+.row-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.my-place .place-dot {
+  width: 12px;
+  height: 12px;
+  border-width: 3px;
+  margin: 0 5px;
+  box-shadow: none;
+}
+.row-notes {
+  flex-basis: 100%;
+  margin-left: 28px;
+  min-height: 28px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink-2);
+  resize: vertical;
+}
+.row-notes:hover {
+  border-color: var(--hairline);
+}
+.row-notes:focus {
+  outline: 0;
+  border-color: var(--accent-line);
+  background: var(--surface);
+}
+.chip.chip-primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+}
+.chip:disabled {
+  opacity: 0.4;
+}
+
+/* ---------- Drawing, dropping, notices ---------- */
+.draw-bar,
+.layer-notice {
+  /* Just above the sun arc, following it between layouts. */
+  position: absolute;
+  left: max(50%, 820px);
+  bottom: 172px;
+  transform: translateX(-50%);
+}
+.draw-bar {
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 6px 6px 14px;
+  border-radius: 20px;
+  max-width: calc(100% - 32px);
+}
+.draw-hint {
+  font-size: 13px;
+  margin-right: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.drop-zone {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(31, 29, 26, 0.28);
+  border: 3px dashed rgba(251, 250, 247, 0.85);
+  pointer-events: none;
+}
+.drop-card {
+  padding: 14px 22px;
+  border-radius: 14px;
+  background: var(--surface);
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+.layer-notice {
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 32px);
+  padding: 8px 6px 8px 14px;
+  border-radius: 18px;
+  background: rgba(31, 29, 26, 0.86);
+  color: #fbfaf7;
+  font-size: 13px;
+  animation: fade-in 220ms ease-out;
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+.layer-notice button {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(251, 250, 247, 0.16);
+  color: inherit;
+}
+.photo-viewer {
+  width: min(900px, calc(100% - 32px));
+  max-height: calc(100% - 48px);
+  padding: 0;
+  overflow: hidden;
+  color: var(--ink);
+}
+.photo-viewer::backdrop {
+  background: rgba(31, 29, 26, 0.55);
+}
+.photo-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  background: #2a2926;
+}
+.photo-frame img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 200px);
+  object-fit: contain;
+}
+.photo-frame p {
+  padding: 24px;
+  color: #cfcac0;
+}
+.photo-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+}
+.photo-info p {
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+.photo-actions {
+  display: flex;
+  gap: 6px;
 }
 
 /* ---------- About dialog ---------- */
@@ -1190,8 +1546,36 @@ input.sun-date {
 
 @media (prefers-reduced-motion: reduce) {
   .layer-panel,
-  .weather-warning {
+  .weather-warning,
+  .layer-notice {
     animation: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .draw-bar,
+  .layer-notice {
+    left: 24px;
+    bottom: 228px;
+    transform: none;
+    max-width: calc(100% - 120px);
+  }
+}
+@media (max-width: 760px) {
+  .draw-bar,
+  .layer-notice {
+    left: 50%;
+    bottom: calc(var(--arc-h) + 24px + var(--safe-bottom));
+    transform: translateX(-50%);
+    max-width: calc(100% - 32px);
+  }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .draw-bar,
+  .layer-notice {
+    left: 50%;
+    bottom: 100px;
+    transform: translateX(-50%);
   }
 }
 

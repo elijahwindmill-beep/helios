@@ -58,6 +58,9 @@ const DEFAULT_OVERLAYS: Overlays = {
   contours: true,
   labels: true,
   lightColour: true,
+  routes: true,
+  places: true,
+  photos: true,
 };
 
 export const useApp = create<AppState>()(

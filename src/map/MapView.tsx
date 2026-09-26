@@ -13,6 +13,8 @@ import { setMap } from './mapInstance';
 import { installShadowLayer } from './shadowLayer';
 import { installSunScene } from '../scene/sunScene';
 import { installLightColour } from '../scene/lightColour';
+import { installUserLayers } from '../layers/userLayers';
+import { useLayers } from '../store/layers';
 import { writeTimeToUrl } from '../store/urlTime';
 import { COMPACT_QUERY } from '../ui/useMedia';
 
@@ -93,7 +95,11 @@ export function MapView() {
       useApp.getState().setPin({ lat: ll.lat, lng: ll.lng, name: '' });
     });
 
-    const movePin = (ll: { lat: number; lng: number }) => useApp.getState().setPin({ lat: ll.lat, lng: ll.lng, name: '' });
+    // Double-click or double-tap moves the pin, or finishes a route being drawn.
+    const movePin = (ll: { lat: number; lng: number }) => {
+      if (useLayers.getState().draft) return useLayers.getState().finishDraft();
+      useApp.getState().setPin({ lat: ll.lat, lng: ll.lng, name: '' });
+    };
     const removeMouse = installCameraControls(map, { onDoubleClick: movePin });
     const removeTouch = installTouchControls(map, { onDoubleTap: movePin });
     const removeControls = () => {
@@ -133,10 +139,13 @@ export function MapView() {
     let removeShadows = () => {};
     let removeScene = () => {};
     let removeLight = () => {};
+    let removeUser = () => {};
     map.once('load', () => {
       removeShadows = installShadowLayer(map, 'contour-minor');
       // Under the labels so they keep their colour.
       removeLight = installLightColour(map, 'contour-label');
+      // Above the light colour and contours, under the labels: routes keep their own colours.
+      removeUser = installUserLayers(map, 'contour-label');
       removeScene = installSunScene(map);
     });
     writeTimeToUrl(s.time);
@@ -183,6 +192,7 @@ export function MapView() {
       removeShadows();
       removeScene();
       removeLight();
+      removeUser();
       removeControls();
       cancelAnimationFrame(raf);
       setMap(null);

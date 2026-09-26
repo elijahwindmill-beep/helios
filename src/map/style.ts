@@ -23,6 +23,10 @@ export interface Overlays {
   labels: boolean;
   /** Golden and blue hour colour on the whole scene (scene/lightColour.ts). */
   lightColour: boolean;
+  /** Your own layers (layers/userLayers.ts). */
+  routes: boolean;
+  places: boolean;
+  photos: boolean;
 }
 
 // Paper tokens from the brief / mockup A.

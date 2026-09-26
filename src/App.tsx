@@ -8,6 +8,7 @@ import { SunCard } from './ui/SunCard';
 import { SunArc } from './ui/SunArc';
 import { Tutorial } from './ui/Tutorial';
 import { WeatherWarning } from './ui/Weather';
+import { DrawBar, DropZone, LayerNotice, PhotoViewer } from './ui/LayerTools';
 
 export function App() {
   return (
@@ -21,6 +22,10 @@ export function App() {
       <MapButtons />
       <CameraReadout />
       <AboutDialog />
+      <DrawBar />
+      <LayerNotice />
+      <PhotoViewer />
+      <DropZone />
       <Tutorial />
     </div>
   );
