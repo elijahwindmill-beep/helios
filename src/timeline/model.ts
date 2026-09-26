@@ -27,6 +27,12 @@ export interface CameraKey {
   zoom: number;
   bearing: number;
   pitch: number;
+  /**
+   * Height of the ground the view pivots on, metres (MapLibre's centre elevation). Stored and
+   * interpolated so playback glides instead of riding every bump under the screen centre.
+   * Older keyframes lack it until playback fills it in.
+   */
+  elevation?: number;
 }
 
 export interface Keyframe {
@@ -43,6 +49,12 @@ export interface Keyframe {
   sunMode: SunMode;
   /** Day lapse only: how many times the time of day sweeps from this keyframe's to the next's; 0 holds or glides once. */
   loops: number;
+  /**
+   * Pass through instead of stopping (After Effects' roving keyframes): the keyframe shapes the
+   * path, and the move keeps going through it. The ease then spans the whole run from the
+   * stop before to the stop after, set on that first stop. First and last keyframes always stop.
+   */
+  through?: boolean;
   /** Layer switches from this keyframe on (overlay name → on), when set. */
   layers?: Record<string, boolean>;
 }

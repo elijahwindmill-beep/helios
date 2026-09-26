@@ -4,12 +4,13 @@ import { formatClock, formatDate, zonedParts, zonedToUtc } from '../sun/timezone
 import { useState } from 'react';
 import type { CameraKey, Easing, SunMode } from '../timeline/model';
 import { EaseEditor } from './EaseEditor';
+import { runAround } from '../timeline/interpolate';
 import { captureNow, currentLayers, seek } from '../timeline/runtime';
 import { parseDate, parseTime } from './parseInput';
 import { TypedField } from './timeControls';
 import { timecode } from './Timeline';
 
-const CAMERA_FIELDS: Array<{ k: keyof CameraKey; label: string; digits: number }> = [
+const CAMERA_FIELDS: Array<{ k: Exclude<keyof CameraKey, 'elevation'>; label: string; digits: number }> = [
   { k: 'lat', label: 'Latitude', digits: 5 },
   { k: 'lng', label: 'Longitude', digits: 5 },
   { k: 'zoom', label: 'Zoom', digits: 2 },
@@ -34,6 +35,7 @@ export function Inspector() {
   const p = zonedParts(k.sun, timeZone);
   const set = (patch: Parameters<typeof TL.updateKeyframe>[1]) => TL.updateKeyframe(k.id, patch);
   const editSun = sunTab && !!k.sunEasing;
+  const [runStart, runEnd] = runAround(clip.keyframes, Math.min(i, clip.keyframes.length - 2));
   const curve: Easing = editSun ? k.sunEasing! : k.easing;
   const setCurve = (e: Easing) => set(editSun ? { sunEasing: e } : { easing: e });
 
@@ -74,11 +76,32 @@ export function Inspector() {
         </button>
       </div>
 
+      {tab === 'ease' && i > 0 && !isLast && (
+        <>
+          <span className="insp-label insp-motion-label">At this keyframe the move</span>
+          <div className="segmented segmented-small" role="group" aria-label="At this keyframe">
+            <button aria-pressed={!k.through} onClick={() => set({ through: undefined })} title="Arrive, ease and set off again: a separate move">
+              Stops
+            </button>
+            <button aria-pressed={!!k.through} onClick={() => set({ through: true })} title="Keep moving: this keyframe only guides the path of one longer move">
+              Passes through
+            </button>
+          </div>
+        </>
+      )}
       {tab === 'ease' &&
         (isLast ? (
           <p className="insp-note">The last keyframe has no ease after it. Select an earlier keyframe, or add one after this.</p>
+        ) : k.through ? (
+          <p className="insp-note">
+            The move passes through here without slowing: it runs from keyframe {runStart + 1} to keyframe {runEnd + 1} as one move, with one ease.{' '}
+            <button className="link-button" onClick={() => TL.select(clip.keyframes[runStart].id)}>
+              Edit that ease on keyframe {runStart + 1}
+            </button>
+          </p>
         ) : (
           <>
+          {runEnd > i + 1 && <p className="insp-note insp-run-note">This ease covers the whole move to keyframe {runEnd + 1}, through {runEnd - i - 1 === 1 ? 'one guide point' : `${runEnd - i - 1} guide points`}.</p>}
           <div className="insp-ease-head">
             <h3 className="hud-label insp-section">Ease to next</h3>
             <div className="insp-ease-tools">

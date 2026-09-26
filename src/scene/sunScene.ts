@@ -26,7 +26,7 @@ const HUD = '"Barlow Condensed", "Barlow", sans-serif';
 const LINE_SHADOW = 'rgba(8,12,18,0.45)';
 
 /** Tilt-shift blur at the top and bottom edges at full lens strength, CSS pixels. */
-const TILT_BLUR_PX = 4;
+const TILT_BLUR_PX = 3;
 
 /** Sun and its reach, in CSS pixels. */
 const SUN_HIT_PX = 28;
@@ -377,7 +377,7 @@ export function installSunScene(map: MlMap): () => void {
     const t = tiltCanvas.getContext('2d')!;
     const mask = (c: CanvasRenderingContext2D) => {
       const g = c.createLinearGradient(0, 0, 0, h);
-      for (const [y, a] of [[0, 1], [0.09, 0.84], [0.18, 0.5], [0.27, 0.16], [0.36, 0], [0.64, 0], [0.73, 0.16], [0.82, 0.5], [0.91, 0.84], [1, 1]]) {
+      for (const [y, a] of [[0, 0.75], [0.055, 0.63], [0.11, 0.38], [0.165, 0.12], [0.22, 0], [0.78, 0], [0.835, 0.12], [0.89, 0.38], [0.945, 0.63], [1, 0.75]]) {
         g.addColorStop(y, `rgba(0,0,0,${a * k})`);
       }
       return g;

@@ -2318,14 +2318,14 @@ input.top-time {
   inset: 0;
 }
 .lens-vignette {
-  background: radial-gradient(ellipse at center, rgba(20, 24, 29, 0) 58%, rgba(20, 24, 29, calc(0.3 * var(--lens))) 100%);
+  background: radial-gradient(ellipse at center, rgba(20, 24, 29, 0) 48%, rgba(20, 24, 29, calc(0.16 * var(--lens))) 72%, rgba(20, 24, 29, calc(0.48 * var(--lens))) 100%);
 }
 /* Blur feathering in from the screen edges (the vignette's shape, fitted to the sides), panels included. */
 .lens-edge {
-  -webkit-backdrop-filter: blur(calc(12px * var(--lens)));
-  backdrop-filter: blur(calc(12px * var(--lens)));
-  -webkit-mask-image: radial-gradient(ellipse closest-side at center, transparent calc(100% - 140px), black 100%);
-  mask-image: radial-gradient(ellipse closest-side at center, transparent calc(100% - 140px), black 100%);
+  -webkit-backdrop-filter: blur(calc(5px * var(--lens)));
+  backdrop-filter: blur(calc(5px * var(--lens)));
+  -webkit-mask-image: radial-gradient(ellipse closest-side at center, transparent calc(100% - 80px), black 100%);
+  mask-image: radial-gradient(ellipse closest-side at center, transparent calc(100% - 80px), black 100%);
 }
 /* Each control window's own tilt-shift: blur along its top and bottom edge. */
 .lens-overlay > .lens-band {
@@ -2343,7 +2343,7 @@ input.top-time {
 }
 .lens-grain {
   mix-blend-mode: overlay;
-  opacity: calc(0.26 * var(--lens));
+  opacity: calc(0.18 * var(--lens));
 }
 .lens-strength {
   display: flex;
@@ -2910,6 +2910,19 @@ input.insp-at {
 }
 .insp-tabs {
   margin: 10px 0 2px !important;
+}
+.insp-motion-label {
+  display: block;
+  margin-top: 10px;
+}
+.insp-run-note {
+  margin: 8px 0 0 !important;
+  font-size: 11px !important;
+}
+.insp-note .link-button {
+  display: inline;
+  padding: 0;
+  font-size: inherit;
 }
 .insp-note {
   margin: 12px 0 4px;

@@ -33,7 +33,7 @@ export function unwrapBearings(bearings: number[]): number[] {
   return out;
 }
 
-type Vec = [number, number, number, number, number]; // mercator x, y, zoom, bearing (unwrapped), pitch
+type Vec = [number, number, number, number, number, number]; // mercator x, y, zoom, bearing (unwrapped), pitch, pivot elevation (NaN if unknown)
 
 function catmullRom(p0: Vec, p1: Vec, p2: Vec, p3: Vec, u: number): Vec {
   const u2 = u * u;
@@ -45,15 +45,61 @@ function catmullRom(p0: Vec, p1: Vec, p2: Vec, p3: Vec, u: number): Vec {
 
 function cameraVecs(keys: Keyframe[]): Vec[] {
   const bearings = unwrapBearings(keys.map((k) => k.camera.bearing));
+  // The pivot height only means something if every keyframe has one.
+  const heights = keys.every((k) => typeof k.camera.elevation === 'number');
   return keys.map((k, i) => {
     const [x, y] = toMercator(k.camera.lng, k.camera.lat);
-    return [x, y, k.camera.zoom, bearings[i], k.camera.pitch];
+    return [x, y, k.camera.zoom, bearings[i], k.camera.pitch, heights ? k.camera.elevation! : NaN];
   });
 }
 
 function vecToCamera(v: Vec): CameraKey {
   const [lng, lat] = fromMercator(v[0], v[1]);
-  return { lng, lat, zoom: v[2], bearing: ((v[3] % 360) + 360) % 360, pitch: Math.min(85, Math.max(0, v[4])) };
+  const cam: CameraKey = { lng, lat, zoom: v[2], bearing: ((v[3] % 360) + 360) % 360, pitch: Math.min(85, Math.max(0, v[4])) };
+  if (Number.isFinite(v[5])) cam.elevation = v[5];
+  return cam;
+}
+
+/** The run a segment belongs to: from the stop at or before it to the next stop (pass-through keyframes between). */
+export function runAround(keys: Keyframe[], segment: number): [number, number] {
+  let a = segment;
+  while (a > 0 && keys[a].through) a--;
+  let b = segment + 1;
+  while (b < keys.length - 1 && keys[b].through) b++;
+  return [a, b];
+}
+
+/**
+ * Monotone cubic (Fritsch–Carlson) through (xs[i], ys[i]), straight lines beyond the ends. Maps
+ * time to keyframe index smoothly, so the speed carries on through pass-through keyframes.
+ */
+export function monotone(xs: number[], ys: number[], x: number): number {
+  const n = xs.length;
+  const d = xs.slice(0, -1).map((x0, k) => (ys[k + 1] - ys[k]) / Math.max(1e-9, xs[k + 1] - x0));
+  const m = xs.map((_, k) => (k === 0 ? d[0] : k === n - 1 ? d[n - 2] : d[k - 1] * d[k] <= 0 ? 0 : (d[k - 1] + d[k]) / 2));
+  for (let k = 0; k < n - 1; k++) {
+    if (d[k] === 0) {
+      m[k] = m[k + 1] = 0;
+      continue;
+    }
+    const a = m[k] / d[k];
+    const b = m[k + 1] / d[k];
+    const h = a * a + b * b;
+    if (h > 9) {
+      const tau = 3 / Math.sqrt(h);
+      m[k] = tau * a * d[k];
+      m[k + 1] = tau * b * d[k];
+    }
+  }
+  if (x <= xs[0]) return ys[0] + (x - xs[0]) * m[0];
+  if (x >= xs[n - 1]) return ys[n - 1] + (x - xs[n - 1]) * m[n - 1];
+  let k = 0;
+  while (xs[k + 1] < x) k++;
+  const h = xs[k + 1] - xs[k];
+  const s = (x - xs[k]) / h;
+  const s2 = s * s;
+  const s3 = s2 * s;
+  return (2 * s3 - 3 * s2 + 1) * ys[k] + (s3 - 2 * s2 + s) * h * m[k] + (-2 * s3 + 3 * s2) * ys[k + 1] + (s3 - s2) * h * m[k + 1];
 }
 
 /** Sun moment between two keyframes at eased progress e. */
@@ -107,18 +153,32 @@ export function evaluate(clip: Clip, t: number, timeZone: string): Frame | null 
 
   let i = 0;
   while (keys[i + 1].t <= t) i++;
-  const k0 = keys[i];
-  const k1 = keys[i + 1];
-  const u = (t - k0.t) / (k1.t - k0.t);
-  const e = ease(u, k0.easing);
-  const sun = sunBetween(k0, k1, k0.sunEasing ? ease(u, k0.sunEasing) : e, timeZone);
+  // The ease spans the run from the stop before to the stop after; pass-through keyframes
+  // between only shape the path, reached about when their times say.
+  const [a, b] = runAround(keys, i);
+  const A = keys[a];
+  const B = keys[b];
+  const u = (t - A.t) / (B.t - A.t);
+  const xs = keys.slice(a, b + 1).map((k) => k.t);
+  const ys = xs.map((_, j) => a + j);
+  /** Eased progress → position along the run: a keyframe index plus a fraction. */
+  const at = (e: number): [number, number] => {
+    const p = b === a + 1 ? a + e : monotone(xs, ys, A.t + e * (B.t - A.t));
+    const seg = Math.min(b - 1, Math.max(a, Math.floor(p)));
+    return [seg, p - seg];
+  };
+
+  const e = ease(u, A.easing);
+  const [seg, f] = at(e);
+  const [sunSeg, sunF] = A.sunEasing ? at(ease(u, A.sunEasing)) : [seg, f];
+  const sun = sunBetween(keys[sunSeg], keys[sunSeg + 1], sunF, timeZone);
 
   const v = cameraVecs(keys);
   let cam: Vec;
-  if (clip.smoothCamera && keys.length >= 3 && k0.easing !== 'hold') {
-    cam = catmullRom(v[Math.max(0, i - 1)], v[i], v[i + 1], v[Math.min(last, i + 2)], e);
+  if (clip.smoothCamera && keys.length >= 3 && A.easing !== 'hold') {
+    cam = catmullRom(v[Math.max(0, seg - 1)], v[seg], v[seg + 1], v[Math.min(last, seg + 2)], f);
   } else {
-    cam = v[i].map((a, j) => a + (v[i + 1][j] - a) * e) as Vec;
+    cam = v[seg].map((x, j) => x + (v[seg + 1][j] - x) * f) as Vec;
   }
   return { sun, camera: vecToCamera(cam), layers, segment: i };
 }

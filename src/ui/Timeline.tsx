@@ -7,6 +7,7 @@ import { addKeyframeHere, frameAt, seek, stopPlayback, togglePlayback } from '..
 import { openProjectFile, saveProjectFile } from '../timeline/projectFile';
 import { useExport } from '../timeline/exportVideo';
 import { arrivingShape, EASY_EASE, leavingShape, type KeyShape } from '../timeline/eases';
+import { runAround } from '../timeline/interpolate';
 
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 
@@ -29,12 +30,14 @@ const Icon = ({ d, fill = false }: { d: string; fill?: boolean }) => (
 
 // Keyframe icons like After Effects': the left half shows how the ease arrives, the right how it
 // leaves. Linear ◆, eased ⧓, hold ■.
-const HALVES: Record<KeyShape, [string, string]> = {
+const HALVES: Record<KeyShape | 'through', [string, string]> = {
+  // Pass-through keyframes are round, like AE's roving keyframes.
+  through: ['M7 2.5A4.5 4.5 0 0 0 7 11.5Z', 'M7 2.5A4.5 4.5 0 0 1 7 11.5Z'],
   linear: ['M7 1L1 7L7 13Z', 'M7 1L13 7L7 13Z'],
   eased: ['M1.5 2L7 7L1.5 12Z', 'M12.5 2L7 7L12.5 12Z'],
   hold: ['M1.5 1.5H7V12.5H1.5Z', 'M7 1.5H12.5V12.5H7Z'],
 };
-const KeyIcon = ({ left, right }: { left: KeyShape; right: KeyShape }) => (
+const KeyIcon = ({ left, right }: { left: KeyShape | 'through'; right: KeyShape | 'through' }) => (
   <svg className="tl-key-icon" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
     <path d={HALVES[left][0]} />
     <path d={HALVES[right][1]} />
@@ -42,10 +45,12 @@ const KeyIcon = ({ left, right }: { left: KeyShape; right: KeyShape }) => (
 );
 
 /** Icon halves for keyframe i, from the eases around it (the sun's own, or the camera's). */
-function keyShapes(keys: Keyframe[], i: number, sun: boolean): { left: KeyShape; right: KeyShape } {
+function keyShapes(keys: Keyframe[], i: number, sun: boolean): { left: KeyShape | 'through'; right: KeyShape | 'through' } {
+  if (keys[i].through && i > 0 && i < keys.length - 1) return { left: 'through', right: 'through' };
   const easeOf = (k: Keyframe) => (sun ? (k.sunEasing ?? k.easing) : k.easing);
   const right = i < keys.length - 1 ? leavingShape(easeOf(keys[i])) : null;
-  const left = i > 0 ? arrivingShape(easeOf(keys[i - 1])) : null;
+  // Arriving: the ease of the whole run this keyframe ends.
+  const left = i > 0 ? arrivingShape(easeOf(keys[runAround(keys, i - 1)[0]])) : null;
   return { left: left ?? right ?? 'linear', right: right ?? left ?? 'linear' };
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evaluate, fromMercator, toMercator, unwrapBearings } from '../../src/timeline/interpolate';
+import { evaluate, fromMercator, monotone, runAround, toMercator, unwrapBearings } from '../../src/timeline/interpolate';
 import type { Clip, Keyframe } from '../../src/timeline/model';
 import { zonedParts } from '../../src/sun/timezone';
 
@@ -107,5 +107,45 @@ describe('project files', async () => {
     const broken = structuredClone(good);
     broken.project.clips[0].keyframes[0].camera = { ...cam, lat: Number.NaN };
     expect(() => parseProjectFile(JSON.stringify(broken).replace('null', '"x"'))).toThrow('damaged');
+  });
+
+  describe('pass-through keyframes', () => {
+    const at = (lng: number, extra: Partial<Keyframe> = {}) => ({ camera: { ...cam, lng }, easing: [1 / 3, 0, 2 / 3, 1] as [number, number, number, number], ...extra });
+    const move = (through: boolean) =>
+      clip([key(0, '2026-09-26T08:00:00Z', at(11.7)), key(5, '2026-09-26T08:00:00Z', at(11.71, { through })), key(10, '2026-09-26T08:00:00Z', at(11.72))]);
+    const speed = (c: Clip, t: number) => (evaluate(c, t + 0.01, TZ)!.camera.lng - evaluate(c, t - 0.01, TZ)!.camera.lng) / 0.02;
+
+    it('a stop keyframe eases to a halt; a pass-through one keeps moving', () => {
+      expect(Math.abs(speed(move(false), 5))).toBeLessThan(1e-4);
+      expect(speed(move(true), 5)).toBeGreaterThan(0.002);
+    });
+
+    it('the ease spans the whole run, and the speed carries on smoothly', () => {
+      const c = move(true);
+      expect(Math.abs(speed(c, 0.02))).toBeLessThan(speed(c, 5) / 5); // slow start of the whole move
+      expect(Math.abs(speed(c, 4.9) - speed(c, 5.1))).toBeLessThan(speed(c, 5) * 0.05);
+      expect(evaluate(c, 10, TZ)!.camera.lng).toBeCloseTo(11.72, 9);
+      expect(runAround(c.keyframes, 0)).toEqual([0, 2]);
+      expect(runAround(c.keyframes, 1)).toEqual([0, 2]);
+    });
+
+    it('maps time to keyframes monotonically', () => {
+      const xs = [0, 1, 8, 10];
+      const ys = [0, 1, 2, 3];
+      let prev = -1;
+      for (let x = 0; x <= 10; x += 0.1) {
+        const y = monotone(xs, ys, x);
+        expect(y).toBeGreaterThanOrEqual(prev - 1e-9);
+        prev = y;
+      }
+      expect(monotone(xs, ys, 8)).toBeCloseTo(2, 9);
+    });
+  });
+
+  it('glides the pivot height between keyframes', () => {
+    const c = clip([key(0, '2026-09-26T08:00:00Z', { camera: { ...cam, elevation: 2000 } }), key(10, '2026-09-26T08:00:00Z', { camera: { ...cam, elevation: 2400 } })]);
+    expect(evaluate(c, 5, TZ)!.camera.elevation).toBeCloseTo(2200, 6);
+    const old = clip([key(0, '2026-09-26T08:00:00Z'), key(10, '2026-09-26T08:00:00Z', { camera: { ...cam, elevation: 2400 } })]);
+    expect(evaluate(old, 5, TZ)!.camera.elevation).toBeUndefined();
   });
 });

@@ -6,7 +6,7 @@ import { useTimeline } from '../store/timeline';
 import { getMap } from '../map/mapInstance';
 import { shadowsBusy } from '../map/shadowLayer';
 import { clipDuration } from './model';
-import { applyFrame, frameAt, seek } from './runtime';
+import { applyFrame, fillPivotHeights, frameAt, seek } from './runtime';
 
 /**
  * Video export, one frame at a time: for every frame the clip is set to that exact moment,
@@ -110,11 +110,11 @@ function compose(out: CanvasRenderingContext2D, map: MlMap, frameIndex: number, 
   const k = app.overlays.lens ? app.lensStrength : 0;
   if (k <= 0) return;
 
-  // Edge blur: the frame blurred, kept only toward the edges (fitted ellipse, 140 px feather).
+  // Edge blur: the frame blurred, kept only toward the edges (fitted ellipse, 80 px feather).
   const t = tmp.getContext('2d')!;
   t.globalCompositeOperation = 'source-over';
   t.clearRect(0, 0, W, H);
-  t.filter = `blur(${12 * k * cssScale}px)`;
+  t.filter = `blur(${5 * k * cssScale}px)`;
   t.drawImage(out.canvas, 0, 0);
   t.filter = 'none';
   t.globalCompositeOperation = 'destination-in';
@@ -123,7 +123,7 @@ function compose(out: CanvasRenderingContext2D, map: MlMap, frameIndex: number, 
   t.scale(1, H / W);
   const r = W / 2;
   const edge = t.createRadialGradient(0, 0, 0, 0, 0, r);
-  edge.addColorStop(Math.max(0, 1 - (140 * cssScale) / r), 'rgba(0,0,0,0)');
+  edge.addColorStop(Math.max(0, 1 - (80 * cssScale) / r), 'rgba(0,0,0,0)');
   edge.addColorStop(1, 'rgba(0,0,0,1)');
   t.fillStyle = edge;
   t.fillRect(-W, -W, 2 * W, 2 * W);
@@ -136,8 +136,9 @@ function compose(out: CanvasRenderingContext2D, map: MlMap, frameIndex: number, 
   out.scale(1, H / W);
   const rv = (W / 2) * Math.SQRT2;
   const vig = out.createRadialGradient(0, 0, 0, 0, 0, rv);
-  vig.addColorStop(0.58, 'rgba(20,24,29,0)');
-  vig.addColorStop(1, `rgba(20,24,29,${0.3 * k})`);
+  vig.addColorStop(0.48, 'rgba(20,24,29,0)');
+  vig.addColorStop(0.72, `rgba(20,24,29,${0.16 * k})`);
+  vig.addColorStop(1, `rgba(20,24,29,${0.48 * k})`);
   out.fillStyle = vig;
   out.fillRect(-W, -W, 2 * W, 2 * W);
   out.restore();
@@ -145,7 +146,7 @@ function compose(out: CanvasRenderingContext2D, map: MlMap, frameIndex: number, 
   // Grain, moving every frame like film (but the same for the same frame).
   out.save();
   out.globalCompositeOperation = 'overlay';
-  out.globalAlpha = 0.26 * k;
+  out.globalAlpha = 0.18 * k;
   const pattern = out.createPattern(noise, 'repeat')!;
   pattern.setTransform(new DOMMatrix().translate((frameIndex * 7919) % 256, (frameIndex * 104729) % 256));
   out.fillStyle = pattern;
@@ -172,6 +173,7 @@ export async function runExport() {
   if (width > maxSize) return fail(`The graphics card can draw at most ${maxSize} px wide, too small for ${height}p. Try 1080p.`);
 
   cancelled = false;
+  fillPivotHeights();
   const duration = clipDuration(clip);
   const total = Math.round(duration * fps) + 1;
   const filename = `helios-${(clip.name || 'clip').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'clip'}-${height}p${fps}.mp4`;

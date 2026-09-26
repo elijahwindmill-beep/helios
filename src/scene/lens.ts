@@ -14,9 +14,9 @@ import { getSunScreen } from './sunScene';
 /** Strength 1 values, from the approved mockup. */
 const CA_PX = 1.2; // red/blue offset
 const CA_GAIN = 3.5; // lifts the blurred fringes back to visible
-const DIRT = 0.55;
-const TILT = 1;
-const FROST = 0.3;
+const DIRT = 0.35;
+const TILT = 0.75;
+const FROST = 0.22;
 
 const VERT = `#version 300 es
 in vec2 a_pos;
@@ -113,9 +113,9 @@ float fbm(vec2 p) {
 void main() {
   vec3 c = texture(u_src, v_uv).rgb;
 
-  // Tilt-shift: sharp through the middle, softening toward the top and bottom edges.
+  // Tilt-shift: sharp through most of the frame, softening only near the top and bottom edges.
   float y = v_uv.y;
-  float tilt = max(smoothstep(0.64, 1.0, y), smoothstep(0.36, 0.0, y));
+  float tilt = max(smoothstep(0.78, 1.0, y), smoothstep(0.22, 0.0, y));
   c = mix(c, texture(u_blur, v_uv).rgb, tilt * u_tilt);
 
   // Soft chromatic aberration.
@@ -123,11 +123,11 @@ void main() {
   c.r += u_gain * (f.r - 0.5) * 2.0;
   c.b += u_gain * (f.b - 0.5) * 2.0;
 
-  // Lens dirt and dust, lit most near the sun (screen blend).
+  // Lens dirt and dust, lit near the sun (screen blend); barely there elsewhere, so no haze.
   vec2 p = v_uv * vec2(u_aspect, 1.0);
   float blot = smoothstep(0.56, 0.82, fbm(p * 2.6 + 3.1));
   vec2 d = (v_uv - u_sun) * vec2(u_aspect, 1.0);
-  float light = mix(0.14, 1.0, u_sunOn * exp(-dot(d, d) * 2.5));
+  float light = mix(0.03, 1.0, u_sunOn * exp(-dot(d, d) * 3.5));
   vec3 flare = vec3(1.0, 0.95, 0.86) * (blot * 0.45 + texture(u_dust, v_uv).a) * light * u_dirt;
   c = 1.0 - (1.0 - clamp(c, 0.0, 1.0)) * (1.0 - flare);
 

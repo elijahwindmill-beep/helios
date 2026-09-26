@@ -1,5 +1,6 @@
 import { useApp } from '../store/app';
 import { useTimeline } from '../store/timeline';
+import type { Map as MlMap } from 'maplibre-gl';
 import { getMap } from '../map/mapInstance';
 import { snapCenterElevation } from '../map/steadyCamera';
 import { timeZoneAt } from '../sun/timezone';
@@ -12,7 +13,7 @@ import { EASY_EASE } from './eases';
 export function captureNow(): Pick<Keyframe, 'sun' | 'camera'> {
   const map = getMap()!;
   const c = map.getCenter();
-  const camera: CameraKey = { lng: c.lng, lat: c.lat, zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };
+  const camera: CameraKey = { lng: c.lng, lat: c.lat, zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch(), elevation: map.getCenterElevation() };
   return { sun: useApp.getState().time, camera };
 }
 
@@ -24,6 +25,24 @@ export function currentLayers(): Record<string, boolean> {
   return Object.fromEntries(KEYED_LAYERS.map((k) => [k, o[k]]));
 }
 
+/**
+ * Keeps MapLibre from re-pinning the view to the ground under the centre (a jump when playback
+ * stops) until the viewer moves the map themselves; then the usual behaviour returns.
+ */
+let holding = false;
+function holdPivot(map: MlMap) {
+  if (holding) return;
+  holding = true;
+  map.setCenterClampedToGround(false);
+  const release = (e: { originalEvent?: unknown }) => {
+    if (!e.originalEvent) return;
+    map.off('movestart', release);
+    map.setCenterClampedToGround(true);
+    holding = false;
+  };
+  map.on('movestart', release);
+}
+
 /** Puts the map, sun and layers where the clip is at time t. */
 export function applyFrame(frame: Frame) {
   const app = useApp.getState();
@@ -31,7 +50,12 @@ export function applyFrame(frame: Frame) {
   if (frame.layers) app.setOverlays(frame.layers as Partial<Overlays>);
   const c = frame.camera;
   snapCenterElevation();
-  getMap()?.jumpTo({ center: [c.lng, c.lat], zoom: c.zoom, bearing: c.bearing, pitch: c.pitch });
+  const map = getMap();
+  if (!map) return;
+  // With the pivot height from the keyframes the camera glides; without it MapLibre would put
+  // the pivot on the ground under the centre every frame, and the camera would ride each bump.
+  if (c.elevation !== undefined) holdPivot(map);
+  map.jumpTo({ center: [c.lng, c.lat], zoom: c.zoom, bearing: c.bearing, pitch: c.pitch, ...(c.elevation !== undefined ? { elevation: c.elevation } : {}) });
 }
 
 export function frameAt(t: number): Frame | null {
@@ -39,8 +63,24 @@ export function frameAt(t: number): Frame | null {
   return evaluate(useTimeline.getState().activeClip(), t, timeZoneAt(pin.lat, pin.lng));
 }
 
+/**
+ * Keyframes made before the pivot height was stored get it now: the ground under their
+ * centre, which is what MapLibre pivoted on when they were set. Needs that terrain loaded.
+ */
+export function fillPivotHeights() {
+  const map = getMap();
+  const tl = useTimeline.getState();
+  if (!map) return;
+  for (const k of tl.activeClip().keyframes) {
+    if (k.camera.elevation !== undefined) continue;
+    const h = map.queryTerrainElevation([k.camera.lng, k.camera.lat]);
+    if (typeof h === 'number' && Number.isFinite(h)) tl.updateKeyframe(k.id, { camera: { ...k.camera, elevation: h } });
+  }
+}
+
 /** Moves the playhead and shows that moment. */
 export function seek(t: number) {
+  if (!useTimeline.getState().playing && useTimeline.getState().activeClip().keyframes.some((k) => k.camera.elevation === undefined)) fillPivotHeights();
   useTimeline.getState().setPlayhead(t);
   const f = frameAt(t);
   if (f) applyFrame(f);
@@ -52,6 +92,7 @@ export function startPlayback() {
   const tl = useTimeline.getState();
   const duration = clipDuration(tl.activeClip());
   if (tl.activeClip().keyframes.length < 2) return;
+  fillPivotHeights();
   const from = tl.playhead >= duration ? 0 : tl.playhead;
   let start = performance.now() - from * 1000;
   tl.setPlaying(true);
