@@ -39,7 +39,7 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 | Right-drag | Orbit: left/right turns, up/down tilts |
 | Ctrl or Cmd + left-drag | Orbit (for trackpads) |
 | Scroll wheel | Move the camera closer or further, toward the cursor |
-| Alt + scroll | Fine tilt |
+| Alt + scroll (on a Mac trackpad: Option + two-finger swipe up/down) | Fine, smooth tilt |
 | Double-click | Move the pin (the spot the sun will be calculated for) |
 | Drag the pin | Move the pin |
 | R / T | Reset north / reset tilt |
