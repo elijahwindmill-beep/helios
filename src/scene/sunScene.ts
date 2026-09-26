@@ -459,19 +459,9 @@ export function installSunScene(map: MlMap): () => void {
       const year = new Date(s.time).getUTCFullYear();
       time = solveDateTime(lat, lng, yearDayStarts(year, tz), target, s.time).time;
     } else {
+      // Plain drag stays on the current day: only the time changes, however far off the path.
       const day = dayTimes(s.time, lat, lng, tz);
-      const sol = solveTimeOnDay(lat, lng, day.dayStart, day.dayEnd, target);
-      time = sol.time;
-      // Dragged well off today's path onto a solstice or equinox path: snap to that day.
-      if (sol.error > 2 && paths) {
-        for (const ref of paths.refs) {
-          const r = solveTimeOnDay(lat, lng, ref.dayStart, ref.dayEnd, target);
-          if (r.error < 1.2) {
-            time = r.time;
-            break;
-          }
-        }
-      }
+      time = solveTimeOnDay(lat, lng, day.dayStart, day.dayEnd, target).time;
     }
     s.setTime(time);
   };

@@ -30,11 +30,11 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
      - 2 fingers: pinch to move the camera closer or further, twist to rotate.
      - 3 fingers drag: orbit (up/down tilts, left/right rotates).
    - Tutorial overlay on first visit that shows the 1, 2 and 3 finger gestures, with a cross (×) button to close it. Once closed it stays closed, and a "?" button brings it back.
-2. **Sun controls: precise and predictable** (next, requested 26 Sep 2026)
+2. ~~**Sun controls: precise and predictable**~~ Done 26 Sep 2026.
    - Dragging the sun only moves it along today's path; it no longer jumps to a solstice or equinox path on its own. Shift + drag (any date) stays.
    - Summer solstice and Winter solstice buttons next to the time, always visible (on phones too).
    - Type an exact time and date (e.g. `06:47`, `12 Oct 2026`) in addition to the sliders.
-3. **Weather for the place and moment** (after the sun-control fixes, requested 26 Sep 2026)
+3. **Weather for the place and moment** (next, requested 26 Sep 2026)
    - Forecast for the pin at the chosen date and time: sky (clear, cloudy, fog), cloud cover, temperature, wind, rain.
    - Source: [MET Norway Locationforecast](https://api.met.no/) (the Norwegian national weather service; free, CC BY 4.0, commercial use allowed with attribution, forecasts about 9 days ahead, works directly from the browser). Credited in the app and About panel.
    - A small floating warning at the top, minimal style, when conditions are poor for light and shadows (overcast, fog, rain or snow, strong wind), e.g. "Overcast at 08:00 · shadows won't show", with a × to dismiss.
@@ -68,6 +68,8 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 ### Sun and shadows
 
 - The card in the top-right shows the time at the pin (in the pin's own timezone), the sun's elevation and azimuth, and sunrise and sunset.
+- **Type a time or date:** click the time or the date and type over it, then press Enter. Times: `06:47`, `647`, `6.47`, `6:47 pm`. Dates: `12 Oct 2026`, `12 october`, `12/10/2026` (day first), `2026-10-12`. Esc cancels. Changing one keeps the other.
+- **Summer solstice / Winter solstice** (under the time) jump to that day, keeping the time. South of the equator they swap months.
 - **Time slider:** sunrise to sunset. Press **24 h** to cover the whole day.
 - **Date slider:** 1 January to 31 December. The marks are the equinoxes and solstices; **Mar / Jun / Sep / Dec** jump straight to them.
 - **Now** jumps to the current time.
@@ -79,7 +81,7 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 
 - Around the pin: a **compass ring** (ticks every 10°, N/E/S/W), today's **sun path** in amber with sunrise and sunset badges where it meets the horizon, the **solstice** paths (dashed) and the **equinox** path (dotted). Each has its own switch in the layer panel.
 - The **sun** sits on its path with a line down to the pin, its elevation (△) and its azimuth on the ring.
-- **Drag the sun** along its path to change the time. Hold **Shift** while dragging to move it anywhere in the sky: Helios finds the date and time when the sun is there. Dragging it onto a solstice or equinox path jumps to that day.
+- **Drag the sun** along its path to change the time. Hold **Shift** while dragging to move it anywhere in the sky: Helios finds the date and time when the sun is there. A plain drag never changes the date, however far you pull it.
 - The ring badges show when the sun centre crosses a flat horizon (like Shadowmap's badges), so they are a few minutes inside the sunrise/sunset times in the sun card.
 - The time is part of the page link (`&t=…` in UTC), so a shared link opens at the same moment.
 

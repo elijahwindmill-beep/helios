@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNarrow } from './useMedia';
 import { useApp } from '../store/app';
 import { useSun } from '../sun/useSun';
 import { seasons } from '../sun/times';
 import { formatClock, formatDate, formatOffset, zonedParts, zonedToUtc } from '../sun/timezone';
+import { parseDate, parseTime } from './parseInput';
 
 const DAY = 86400000;
 
@@ -12,6 +13,56 @@ function dayOfYear(p: { year: number; month: number; day: number }): number {
 }
 function daysInYear(year: number): number {
   return Math.round((Date.UTC(year + 1, 0, 1) - Date.UTC(year, 0, 1)) / DAY);
+}
+
+/**
+ * A value you can click and type over. Enter or leaving the field applies it; Escape or an
+ * unreadable entry puts the old value back.
+ */
+function TypedField(props: { value: string; label: string; hint: string; className: string; apply(text: string): boolean }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const [invalid, setInvalid] = useState(false);
+  const draftRef = useRef<string | null>(null);
+  const edit = (text: string | null) => {
+    draftRef.current = text;
+    setDraft(text);
+    setInvalid(false);
+  };
+  return (
+    <input
+      className={`typed ${props.className}`}
+      aria-label={props.label}
+      title={props.hint}
+      value={draft ?? props.value}
+      aria-invalid={invalid || undefined}
+      spellCheck={false}
+      autoComplete="off"
+      enterKeyHint="done"
+      onFocus={(e) => {
+        edit(props.value);
+        const input = e.currentTarget;
+        setTimeout(() => input.select(), 0);
+      }}
+      onChange={(e) => edit(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          edit(null);
+          e.currentTarget.blur();
+        } else if (e.key === 'Enter') {
+          if (draftRef.current !== null && props.apply(draftRef.current)) {
+            edit(null);
+            e.currentTarget.blur();
+          } else {
+            setInvalid(true);
+          }
+        }
+      }}
+      onBlur={() => {
+        if (draftRef.current !== null) props.apply(draftRef.current);
+        edit(null);
+      }}
+    />
+  );
 }
 
 /** Top-right card: the viewed moment, sun angles, and the time and date sliders. */
@@ -49,6 +100,30 @@ export function SunCard() {
     );
   };
 
+  // Typed time keeps the date; typed date keeps the time.
+  const applyTime = (text: string) => {
+    const t = parseTime(text);
+    if (!t) return false;
+    setTime(zonedToUtc({ year: local.year, month: local.month, day: local.day, ...t }, timeZone));
+    return true;
+  };
+  const applyDate = (text: string) => {
+    const d = parseDate(text, year);
+    if (!d) return false;
+    setTime(zonedToUtc({ ...d, hour: local.hour, minute: local.minute }, timeZone));
+    return true;
+  };
+
+  // Summer and winter swap south of the equator.
+  const south = useApp((s) => s.pin.lat) < 0;
+  const june = notches[1].index;
+  const december = notches[3].index;
+  const today = dayOfYear(local);
+  const solstices = [
+    { name: 'Summer', index: south ? december : june },
+    { name: 'Winter', index: south ? june : december },
+  ];
+
   const below = position.elevation < 0;
   const narrow = useNarrow();
   const [expanded, setExpanded] = useState(false);
@@ -58,10 +133,22 @@ export function SunCard() {
     <section className="panel sun-card" aria-label="Sun and time">
       <div className="sun-card-top">
         <div className="sun-time">
-          <span className="mono sun-clock">{formatClock(time, timeZone)}</span>
+          <TypedField
+            className="mono sun-clock"
+            label="Time"
+            hint="Type a time, e.g. 06:47"
+            value={formatClock(time, timeZone)}
+            apply={applyTime}
+          />
           <span className="sun-offset mono">{formatOffset(offset)}</span>
         </div>
-        <span className="sun-date">{formatDate(time, timeZone)}</span>
+        <TypedField
+          className="sun-date"
+          label="Date"
+          hint="Type a date, e.g. 12 Oct 2026 or 12/10/2026"
+          value={formatDate(time, timeZone)}
+          apply={applyDate}
+        />
         {narrow && (
           <button
             className="icon-button sun-expand"
@@ -74,6 +161,29 @@ export function SunCard() {
             </svg>
           </button>
         )}
+      </div>
+      <div className="solstices">
+        {solstices.map((sol) => (
+          <button
+            key={sol.name}
+            className="chip chip-small"
+            aria-pressed={today === sol.index}
+            onClick={() => setDayOfYear(sol.index)}
+            title={`Jump to the ${sol.name.toLowerCase()} solstice, keeping the time`}
+          >
+            {sol.name === 'Summer' ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
+                <path d="M12 2.5v19M3.8 7.25l16.4 9.5M3.8 16.75l16.4-9.5M9.5 4l2.5 2 2.5-2M9.5 20l2.5-2 2.5 2" />
+              </svg>
+            )}
+            {sol.name} solstice
+          </button>
+        ))}
       </div>
       {narrow && !expanded && (
         <p className="sun-summary mono">
