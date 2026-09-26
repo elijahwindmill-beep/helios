@@ -2904,3 +2904,19 @@ html[data-exporting] .maplibregl-ctrl-bottom-right {
     display: none;
   }
 }
+
+/* ---------- Sun hours legend ---------- */
+.hours-legend {
+  margin: -4px 0 12px;
+}
+.hours-bar {
+  height: 8px;
+  border-radius: 4px;
+}
+.hours-scale {
+  display: flex;
+  justify-content: space-between;
+  margin: 3px 0 6px;
+  font-size: 11px;
+  color: var(--muted);
+}

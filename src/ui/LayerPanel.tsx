@@ -6,6 +6,8 @@ import { useNarrow, useReadoutInPanel } from './useMedia';
 import { MyLayers } from './MyLayers';
 import { SearchBar } from './SearchBar';
 import { useSpots } from '../store/spots';
+import { useSunHours } from '../store/sunHours';
+import { HOURS_STOPS } from '../terrain/sunHours';
 
 const BASES: Array<{ id: BaseLayer; label: string }> = [
   { id: 'satellite', label: 'Satellite' },
@@ -15,6 +17,7 @@ const BASES: Array<{ id: BaseLayer; label: string }> = [
 
 const OVERLAYS: Array<{ id: keyof Overlays; label: string; swatch: string }> = [
   { id: 'shadows', label: 'Cast shadows', swatch: '#3B4A5A' },
+  { id: 'sunHours', label: 'Sun hours (whole day)', swatch: 'linear-gradient(90deg, #1b2a4a, #3fa7a0, #f5c542, #ff8a3d)' },
   { id: 'routes', label: 'Routes', swatch: '#5B8DEF' },
   { id: 'places', label: 'Places', swatch: '#1F1D1A' },
   { id: 'photos', label: 'Photos', swatch: '#C98A0F' },
@@ -44,6 +47,7 @@ export function LayerPanel() {
   const quality = useApp((s) => s.shadowQuality);
   const lensStrength = useApp((s) => s.lensStrength);
   const spotStatus = useSpots((s) => s.status);
+  const hours = useSunHours();
   const status = useApp((s) => s.shadowStatus);
   const { setBase, toggleOverlay, setImagery, setMaptilerKey, setAboutOpen, setShadowQuality } = useApp.getState();
   const provider = IMAGERY[imagery];
@@ -124,6 +128,21 @@ export function LayerPanel() {
           </li>
         ))}
       </ul>
+
+      {overlays.sunHours && (
+        <div className="hours-legend">
+          <div className="hours-bar" style={{ background: `linear-gradient(90deg, ${HOURS_STOPS.map(([h, c]) => `rgb(${c.join(',')}) ${(h / 11) * 100}%`).join(', ')})` }} />
+          <div className="hours-scale mono">
+            <span>0 h</span>
+            <span>4 h</span>
+            <span>8 h</span>
+            <span>11+ h</span>
+          </div>
+          <p className="spot-status" role="status">
+            {hours.state === 'working' ? `Adding up the day's sun… ${Math.round(hours.progress * 100)}%` : `Direct sun on the viewed day, up to ${hours.max.toFixed(1)} h here. Replaces cast shadows while on.`}
+          </p>
+        </div>
+      )}
 
       {overlays.photoSpots && spotStatus !== 'idle' && (
         <p className="spot-status" role="status">

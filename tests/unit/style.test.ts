@@ -3,7 +3,7 @@ import { buildStyle, layerVisibility } from '../../src/map/style';
 import { IMAGERY } from '../../src/map/sources';
 
 describe('base layers', () => {
-  const all = { shadows: true, sunPath: true, solstices: true, compass: true, contours: true, labels: true, lightColour: true, routes: true, places: true, photos: true, lens: true, photoSpots: true };
+  const all = { shadows: true, sunPath: true, solstices: true, compass: true, contours: true, labels: true, lightColour: true, routes: true, places: true, photos: true, lens: true, photoSpots: true, sunHours: false };
 
   it('shows exactly one base at a time', () => {
     const sat = layerVisibility('satellite', all);
@@ -38,8 +38,8 @@ describe('base layers', () => {
     });
     expect(style.terrain?.source).toBe('dem-terrain');
     const ids = style.layers.map((l) => l.id);
-    // 'shadows' is added at runtime once elevation loads.
-    for (const id of Object.keys(layerVisibility('paper', all))) if (id !== 'shadows') expect(ids).toContain(id);
+    // 'shadows' and 'sun-hours' are added at runtime once elevation loads.
+    for (const id of Object.keys(layerVisibility('paper', all))) if (id !== 'shadows' && id !== 'sun-hours') expect(ids).toContain(id);
   });
 
   it('never puts a MapTiler key in the style unless one is given', () => {

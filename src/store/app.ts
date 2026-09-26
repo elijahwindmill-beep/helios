@@ -82,6 +82,7 @@ const DEFAULT_OVERLAYS: Overlays = {
   photos: true,
   lens: true,
   photoSpots: true,
+  sunHours: false,
 };
 
 export const useApp = create<AppState>()(

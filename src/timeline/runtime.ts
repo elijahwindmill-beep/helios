@@ -15,7 +15,7 @@ export function captureNow(): Pick<Keyframe, 'sun' | 'camera'> {
 }
 
 /** Which layers a keyframe can switch. */
-export const KEYED_LAYERS: Array<keyof Overlays> = ['shadows', 'sunPath', 'solstices', 'compass', 'contours', 'labels', 'lightColour', 'routes', 'places', 'photos', 'photoSpots'];
+export const KEYED_LAYERS: Array<keyof Overlays> = ['shadows', 'sunPath', 'solstices', 'compass', 'contours', 'labels', 'lightColour', 'routes', 'places', 'photos', 'photoSpots', 'sunHours'];
 
 export function currentLayers(): Record<string, boolean> {
   const o = useApp.getState().overlays;

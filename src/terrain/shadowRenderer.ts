@@ -190,6 +190,14 @@ export class ShadowRenderer {
     return performance.now() - t0;
   }
 
+  /** The whole last render as RGBA bytes, bottom row first (shadow amount is in alpha). */
+  readMask(): Uint8Array {
+    const gl = this.gl;
+    const px = new Uint8Array(this.canvas.width * this.canvas.height * 4);
+    gl.readPixels(0, 0, this.canvas.width, this.canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    return px;
+  }
+
   /** Shadow amount 0-1 at an output pixel (row 0 = north), for checks and tests. */
   readShadow(col: number, rowFromTop: number, strength: number): number {
     const gl = this.gl;

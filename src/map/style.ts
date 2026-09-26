@@ -31,6 +31,8 @@ export interface Overlays {
   lens: boolean;
   /** Wikimedia Commons photos around the view (layers/photoSpots.ts). */
   photoSpots: boolean;
+  /** Hours of direct sun over the viewed day, as a heatmap (map/shadowLayer.ts). Replaces the cast shadows while on. */
+  sunHours: boolean;
 }
 
 // Paper tokens from the brief / mockup A.
@@ -79,6 +81,9 @@ export function layerVisibility(base: BaseLayer, overlays: Overlays): Record<str
   const out: Record<string, boolean> = {};
   for (const [id, bases] of Object.entries(BASE_GROUPS)) out[id] = bases.includes(base);
   for (const [id, key] of Object.entries(OVERLAY_GROUPS)) out[id] = overlays[key];
+  // The sun-hours heatmap already includes the shadows, so it stands in for them.
+  out.shadows = overlays.shadows && !overlays.sunHours;
+  out['sun-hours'] = !!overlays.sunHours;
   return out;
 }
 
