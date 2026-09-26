@@ -34,15 +34,23 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
    - Dragging the sun only moves it along today's path; it no longer jumps to a solstice or equinox path on its own. Shift + drag (any date) stays.
    - Summer solstice and Winter solstice buttons next to the time, always visible (on phones too).
    - Type an exact time and date (e.g. `06:47`, `12 Oct 2026`) in addition to the sliders.
-3. **Real-world light colour (white balance) through the day** (after phase 3, requested 26 Sep 2026)
+3. **Weather for the place and moment** (after the sun-control fixes, requested 26 Sep 2026)
+   - Forecast for the pin at the chosen date and time: sky (clear, cloudy, fog), cloud cover, temperature, wind, rain.
+   - Source: [MET Norway Locationforecast](https://api.met.no/) (the Norwegian national weather service; free, CC BY 4.0, commercial use allowed with attribution, forecasts about 9 days ahead, works directly from the browser). Credited in the app and About panel.
+   - A small floating warning at the top, minimal style, when conditions are poor for light and shadows (overcast, fog, rain or snow, strong wind), e.g. "Overcast at 08:00 · shadows won't show", with a × to dismiss.
+   - Dates beyond the forecast range say so plainly instead of guessing. (Long-term climate averages would need a second source; Open-Meteo's free tier is non-commercial, so it would need their paid plan.)
+4. **Real-world light colour (white balance) through the day** (after phase 3, requested 26 Sep 2026)
    - As the sun nears the horizon the whole scene warms like real light: neutral daylight (about 5500 K) at high sun, warming through golden hour (sun below about 6°) to deep orange at sunset, then the cool blue of blue hour (sun 4° to 6° below the horizon) and dark night after that.
    - Driven by the real sun elevation at the pin, so it follows the time and date sliders, the arc and (later) keyframed clips.
    - Sunlit ground takes the warm sun colour, shadows take the cooler sky-blue fill, and the sky and horizon haze change with it.
    - Drawn into the map image itself (not a screen overlay), so exported videos include it. An on/off toggle keeps a neutral view for plain scouting.
-4. **Apple-style redesign** (after phase 4, requested 26 Sep 2026, waiting on approval of the mockup)
+5. **Apple-style redesign** (after phase 4, requested 26 Sep 2026, waiting on approval of the mockup)
    - Frosted-glass panels, Apple system fonts, iOS-style switches and segmented controls, round map buttons.
    - Sun scene: clean sun disc with a soft glow and no thick outline, thin gradient sun path with soft light under it, hairline dashed solstice paths, glass labels.
-   - Mockup: the "Helios Apple-style mockup" design canvas (desktop, phone, and a before/after of the sun).
+   - Thin lines everywhere (compass, sun paths, sliders), soft near-black instead of pure black, a white Apple Weather-style sun.
+   - Time scrubber redesigned after Apple Weather's sun chart: sun height through 24 h, horizon line, day part lit, twilight dots, first light / sunrise / sunset / last light / daylight.
+   - Lens look on the map: a subtle tilt-shift blur at the top and bottom edges with slight chromatic aberration and vignette, like a vintage lens (strength adjustable, off switch).
+   - Mockup: the "Helios Apple-style mockup" design canvas (desktop, phone with a weather warning, and a before/after of the sun).
 
 ## Using it
 
