@@ -57,6 +57,7 @@ const DEFAULT_OVERLAYS: Overlays = {
   compass: true,
   contours: true,
   labels: true,
+  lightColour: true,
 };
 
 export const useApp = create<AppState>()(

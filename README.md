@@ -39,7 +39,7 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
    - Source: [MET Norway Locationforecast](https://api.met.no/) (the Norwegian national weather service; free, CC BY 4.0, commercial use allowed with attribution, forecasts about 9 days ahead, works directly from the browser). Credited in the app and About panel.
    - A small floating warning at the top, minimal style, when conditions are poor for light and shadows (overcast, fog, rain or snow, strong wind), e.g. "Overcast at 08:00 · shadows won't show", with a × to dismiss.
    - Dates beyond the forecast range say so plainly instead of guessing. (Long-term climate averages would need a second source; Open-Meteo's free tier is non-commercial, so it would need their paid plan.)
-4. **Real-world light colour (white balance) through the day** (next, requested 26 Sep 2026)
+4. ~~**Real-world light colour (white balance) through the day**~~ Done 26 Sep 2026.
    - As the sun nears the horizon the whole scene warms like real light: neutral daylight (about 5500 K) at high sun, warming through golden hour (sun below about 6°) to deep orange at sunset, then the cool blue of blue hour (sun 4° to 6° below the horizon) and dark night after that.
    - Driven by the real sun elevation at the pin, so it follows the time and date sliders, the arc and (later) keyframed clips.
    - Sunlit ground takes the warm sun colour, shadows take the cooler sky-blue fill, and the sky and horizon haze change with it.
@@ -78,6 +78,7 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 - **Sun arc** (bottom): drag or click the sun along the arc to change the time. When it has keyboard focus, arrow keys step 5 minutes (Shift: 30), Home and End jump to sunrise and sunset.
 - **Cast shadows** (layer panel) shows where the terrain blocks the sun. Quality: Low, Medium (default), High. High loads more detailed elevation and takes longer to draw.
 - The relief shading on Paper and Terrain is lit from the real sun direction too.
+- **Golden hour light** (layer panel, on by default): the whole map takes the colour of the real light. Neutral when the sun is high, warming from about 12° down to a deep orange at sunset, then the blue of blue hour (sun 4° to 6° below the horizon) and a dim blue night. Shadows cool toward sky blue as the sun gets low, like real shadows lit by the sky. It's drawn into the map image itself, so video export will include it; labels stay neutral. Turn it off for a plain scouting view.
 
 ### Sun in 3D
 
@@ -160,9 +161,10 @@ Libraries: MapLibre GL JS (BSD-3), maplibre-contour (BSD-3), React (MIT), Zustan
 ```
 src/
   map/     MapLibre setup, style and base layers, camera controls, tile sources, shadow layer
-  scene/   3D sun scene: compass ring, sun paths, sun, labels, dragging
+  scene/   3D sun scene: compass ring, sun paths, sun, labels, dragging; golden/blue hour light colour
   sun/     sun position, sunrise and sunset, seasons, timezones, inverse solver for dragging
   terrain/ elevation tiles, height mosaic, shadow ray-march (CPU reference and GPU shader)
+  weather/ MET Norway forecast: fetching, picking the slot for a time, warnings
   store/   app state (Zustand), saved in the browser
   ui/      panels, search, readout, theme
 tests/     unit tests

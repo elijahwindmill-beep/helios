@@ -12,6 +12,7 @@ import { readCamera } from './camera';
 import { setMap } from './mapInstance';
 import { installShadowLayer } from './shadowLayer';
 import { installSunScene } from '../scene/sunScene';
+import { installLightColour } from '../scene/lightColour';
 import { writeTimeToUrl } from '../store/urlTime';
 import { COMPACT_QUERY } from '../ui/useMedia';
 
@@ -131,8 +132,11 @@ export function MapView() {
 
     let removeShadows = () => {};
     let removeScene = () => {};
+    let removeLight = () => {};
     map.once('load', () => {
       removeShadows = installShadowLayer(map, 'contour-minor');
+      // Under the labels so they keep their colour.
+      removeLight = installLightColour(map, 'contour-label');
       removeScene = installSunScene(map);
     });
     writeTimeToUrl(s.time);
@@ -178,6 +182,7 @@ export function MapView() {
       unsubscribe();
       removeShadows();
       removeScene();
+      removeLight();
       removeControls();
       cancelAnimationFrame(raf);
       setMap(null);

@@ -17,6 +17,7 @@ const OVERLAYS: Array<{ id: keyof Overlays; label: string; swatch: string }> = [
   { id: 'compass', label: 'Compass ring', swatch: '#6B665C' },
   { id: 'contours', label: 'Contours', swatch: '#BDB6A5' },
   { id: 'labels', label: 'Labels', swatch: '#8A857B' },
+  { id: 'lightColour', label: 'Golden hour light', swatch: 'linear-gradient(135deg, #F2B45A, #7C8FB8)' },
 ];
 
 const QUALITIES: Array<{ id: ShadowQuality; label: string }> = [

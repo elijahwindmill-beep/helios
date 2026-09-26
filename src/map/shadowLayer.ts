@@ -26,6 +26,9 @@ const LOOK: Record<BaseLayer, { color: [number, number, number]; strength: numbe
   satellite: { color: [0.04, 0.07, 0.12], strength: 0.55 },
 };
 
+// Low sun: shadows are lit by the blue sky, not the sun, so they cool as sunlit ground warms.
+const SKY_FILL: [number, number, number] = [0.12, 0.26, 0.62];
+
 /**
  * Terrain shadows: loads elevation for the view plus a margin, ray-marches it toward the
  * sun on the GPU, and drapes the result on the 3D terrain as a canvas raster layer.
@@ -60,10 +63,12 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
     const sun = sunPosition(s.time, s.pin.lat, s.pin.lng);
     const q = QUALITY[s.shadowQuality];
     const look = LOOK[s.base];
+    const cool = s.overlays.lightColour ? 0.7 * Math.min(1, Math.max(0, (12 - sun.elevation) / 12)) : 0;
+    const color = look.color.map((c, i) => c + (SKY_FILL[i] - c) * cool) as [number, number, number];
     const ms = renderer.render({
       azimuth: sun.azimuth,
       elevation: sun.elevationTrue,
-      color: look.color,
+      color,
       strength: look.strength,
       maxOutputSize: Math.min(q.maxOutputSize, renderer.maxTextureSize),
       steps: q.steps,
@@ -168,7 +173,7 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
       lightHillshade();
       requestDraw();
     }
-    if (now.base !== prev.base) requestDraw();
+    if (now.base !== prev.base || now.overlays.lightColour !== prev.overlays.lightColour) requestDraw();
     if (now.shadowQuality !== prev.shadowQuality) {
       mosaic = null;
       refreshMosaic();

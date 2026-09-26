@@ -21,6 +21,8 @@ export interface Overlays {
   compass: boolean;
   contours: boolean;
   labels: boolean;
+  /** Golden and blue hour colour on the whole scene (scene/lightColour.ts). */
+  lightColour: boolean;
 }
 
 // Paper tokens from the brief / mockup A.
