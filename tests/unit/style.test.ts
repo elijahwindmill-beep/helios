@@ -3,7 +3,7 @@ import { buildStyle, layerVisibility } from '../../src/map/style';
 import { IMAGERY } from '../../src/map/sources';
 
 describe('base layers', () => {
-  const all = { shadows: true, sunPath: true, solstices: true, compass: true, contours: true, labels: true, lightColour: true, routes: true, places: true, photos: true };
+  const all = { shadows: true, sunPath: true, solstices: true, compass: true, contours: true, labels: true, lightColour: true, routes: true, places: true, photos: true, lens: true };
 
   it('shows exactly one base at a time', () => {
     const sat = layerVisibility('satellite', all);

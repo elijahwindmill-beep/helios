@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-function useMedia(query: string): boolean {
+export function useMedia(query: string): boolean {
   return useSyncExternalStore(
     (cb) => {
       const m = window.matchMedia(query);
@@ -17,6 +17,9 @@ function useMedia(query: string): boolean {
  */
 export const COMPACT_QUERY = '(max-width: 760px), (max-height: 500px) and (orientation: landscape)';
 export const useNarrow = () => useMedia(COMPACT_QUERY);
+
+/** Desktop too narrow for the camera readout beside the sun chart: the readout moves into the layer panel. */
+export const useReadoutInPanel = () => useMedia(`${COMPACT_QUERY}, (max-width: 1399px)`);
 
 /** True on phones and tablets (a finger is the main pointer). */
 export const useTouchDevice = () => useMedia('(pointer: coarse)');

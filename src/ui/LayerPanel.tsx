@@ -2,8 +2,9 @@ import { useApp, type ShadowQuality } from '../store/app';
 import { IMAGERY, IMAGERY_ORDER } from '../map/sources';
 import type { BaseLayer, Overlays } from '../map/style';
 import { CameraReadout } from './CameraReadout';
-import { useNarrow } from './useMedia';
+import { useNarrow, useReadoutInPanel } from './useMedia';
 import { MyLayers } from './MyLayers';
+import { SearchBar } from './SearchBar';
 
 const BASES: Array<{ id: BaseLayer; label: string }> = [
   { id: 'satellite', label: 'Satellite' },
@@ -22,6 +23,7 @@ const OVERLAYS: Array<{ id: keyof Overlays; label: string; swatch: string }> = [
   { id: 'contours', label: 'Contours', swatch: '#BDB6A5' },
   { id: 'labels', label: 'Labels', swatch: '#8A857B' },
   { id: 'lightColour', label: 'Golden hour light', swatch: 'linear-gradient(135deg, #F2B45A, #7C8FB8)' },
+  { id: 'lens', label: 'Lens look', swatch: 'radial-gradient(circle, #f4f6f8 20%, #5b8def 60%, #e4572e)' },
 ];
 
 const QUALITIES: Array<{ id: ShadowQuality; label: string }> = [
@@ -38,10 +40,12 @@ export function LayerPanel() {
   const imagery = useApp((s) => s.imagery);
   const maptilerKey = useApp((s) => s.maptilerKey);
   const quality = useApp((s) => s.shadowQuality);
+  const lensStrength = useApp((s) => s.lensStrength);
   const status = useApp((s) => s.shadowStatus);
   const { setBase, toggleOverlay, setImagery, setMaptilerKey, setAboutOpen, setShadowQuality } = useApp.getState();
   const provider = IMAGERY[imagery];
   const narrow = useNarrow();
+  const readoutInPanel = useReadoutInPanel();
   const open = useApp((s) => s.layersOpen);
 
   return (
@@ -53,10 +57,16 @@ export function LayerPanel() {
           </svg>
         </button>
       )}
-      <h1 className="title">Helios</h1>
-      <p className="subtitle">Sun and shadow scout</p>
+      {narrow ? (
+        <>
+          <h1 className="title">Helios</h1>
+          <p className="subtitle">Sun and shadow scout</p>
+        </>
+      ) : (
+        <SearchBar />
+      )}
 
-      <h2 className="eyebrow">Base layer</h2>
+      <h2 className="eyebrow hud-label">Base layer</h2>
       <div className="segmented" role="group" aria-label="Base layer">
         {BASES.map((b) => (
           <button key={b.id} aria-pressed={base === b.id} onClick={() => setBase(b.id)}>
@@ -112,6 +122,22 @@ export function LayerPanel() {
         ))}
       </ul>
 
+      {overlays.lens && (
+        <label className="lens-strength">
+          <span className="hud-label">Lens strength</span>
+          <input
+            type="range"
+            className="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={lensStrength}
+            aria-label="Lens strength"
+            onChange={(e) => useApp.getState().setLensStrength(Number(e.target.value))}
+          />
+        </label>
+      )}
+
       {overlays.shadows && (
         <div className="shadow-settings">
           <div className="segmented segmented-small" role="group" aria-label="Shadow quality">
@@ -131,9 +157,9 @@ export function LayerPanel() {
 
       <MyLayers />
 
-      {narrow && (
+      {readoutInPanel && (
         <>
-          <h2 className="eyebrow">Camera</h2>
+          <h2 className="eyebrow hud-label">Camera</h2>
           <CameraReadout inline />
         </>
       )}

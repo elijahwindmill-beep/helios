@@ -27,6 +27,8 @@ interface AppState {
   /** Time slider spans the whole day instead of sunrise to sunset. */
   fullDay: boolean;
   shadowQuality: ShadowQuality;
+  /** 0–1, how strong the lens look is when it's on. */
+  lensStrength: number;
   /** Loading state of the shadow layer, for the UI. */
   shadowStatus: { state: 'idle' | 'loading' | 'error'; message?: string; renderMs?: number };
   /** Phone layout: the layer panel is a bottom sheet that opens on demand. */
@@ -44,6 +46,7 @@ interface AppState {
   setTime(ms: number): void;
   setFullDay(on: boolean): void;
   setShadowQuality(q: ShadowQuality): void;
+  setLensStrength(v: number): void;
   setShadowStatus(s: AppState['shadowStatus']): void;
   setLayersOpen(open: boolean): void;
   openTutorial(): void;
@@ -61,6 +64,7 @@ const DEFAULT_OVERLAYS: Overlays = {
   routes: true,
   places: true,
   photos: true,
+  lens: true,
 };
 
 export const useApp = create<AppState>()(
@@ -76,6 +80,7 @@ export const useApp = create<AppState>()(
       time: readTimeFromUrl() ?? Date.now(),
       fullDay: false,
       shadowQuality: 'medium',
+      lensStrength: 1,
       shadowStatus: { state: 'idle' },
       layersOpen: false,
       tutorialOpen: false,
@@ -90,6 +95,7 @@ export const useApp = create<AppState>()(
       setTime: (time) => set({ time: Math.round(time / 60000) * 60000 }),
       setFullDay: (fullDay) => set({ fullDay }),
       setShadowQuality: (shadowQuality) => set({ shadowQuality }),
+      setLensStrength: (lensStrength) => set({ lensStrength: Math.min(1, Math.max(0, lensStrength)) }),
       setShadowStatus: (shadowStatus) => set({ shadowStatus }),
       setLayersOpen: (layersOpen) => set({ layersOpen }),
       openTutorial: () => set({ tutorialOpen: true, layersOpen: false }),
@@ -108,6 +114,7 @@ export const useApp = create<AppState>()(
         pin: s.pin,
         fullDay: s.fullDay,
         shadowQuality: s.shadowQuality,
+        lensStrength: s.lensStrength,
         tutorialSeen: s.tutorialSeen,
       }),
       // Overlays saved by an older version lack newer keys; fill them with defaults.

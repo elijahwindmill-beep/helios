@@ -1,10 +1,10 @@
 import { useRef } from 'react';
-import { useApp } from '../store/app';
 import { useLayers } from '../store/layers';
 import { getMap } from '../map/mapInstance';
 import { boundsOf, type LngLat } from '../layers/model';
 import { importFiles } from '../layers/importFiles';
 import { deletePhotoBlob } from '../layers/photoBlobs';
+import { IMPORT_ACCEPT, addPlaceAtPin, toggleDrawing } from '../layers/actions';
 
 function frame(points: LngLat[]) {
   const map = getMap();
@@ -35,19 +35,6 @@ export function MyLayers() {
   const L = useLayers.getState();
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const addPlaceAtPin = () => {
-    const { pin, overlays, toggleOverlay } = useApp.getState();
-    L.addPlaces([{ name: pin.name || `Place ${places.length + 1}`, notes: '', lat: pin.lat, lng: pin.lng }]);
-    if (!overlays.places) toggleOverlay('places');
-  };
-  const draw = () => {
-    if (drawing) return L.finishDraft();
-    L.startDraft();
-    if (!useApp.getState().overlays.routes) useApp.getState().toggleOverlay('routes');
-    // On phones the sheet covers the map; get it out of the way.
-    useApp.getState().setLayersOpen(false);
-  };
-
   return (
     <section className="my-layers" aria-label="Your layers">
       <h2 className="eyebrow">Your layers</h2>
@@ -55,7 +42,7 @@ export function MyLayers() {
         <button className="chip chip-small" onClick={() => fileInput.current?.click()}>
           Import…
         </button>
-        <button className="chip chip-small" aria-pressed={drawing} onClick={draw}>
+        <button className="chip chip-small" aria-pressed={drawing} onClick={toggleDrawing}>
           {drawing ? 'Finish route' : 'Draw route'}
         </button>
         <button className="chip chip-small" onClick={addPlaceAtPin} title="Save the sun pin's spot as a place">
@@ -67,7 +54,7 @@ export function MyLayers() {
         type="file"
         multiple
         hidden
-        accept=".gpx,.kml,.geojson,.json,image/jpeg,image/heic,image/heif,.heic,.jpg,.jpeg"
+        accept={IMPORT_ACCEPT}
         onChange={(e) => {
           const files = Array.from(e.target.files ?? []);
           e.target.value = '';

@@ -11,7 +11,7 @@ Default location: Seceda ridgeline, Val Gardena (46.60068, 11.72598).
 | Phase | What | State |
 |---|---|---|
 | 1 | 3D terrain, Satellite / Paper / Terrain bases, mouse controls, camera readout, search | Done |
-| 2 | Sun position, cast terrain shadows, time and date sliders, sun-arc scrubber | Done |
+| 2 | Sun position, cast terrain shadows, time and date sliders, sun scrubber | Done |
 | 3 | Compass ring, sun paths, solstice paths, draggable sun | Done |
 | 4 | Routes (GPX/KML/GeoJSON), places, geotagged photos | Done |
 | 5 | Keyframes, clips, timeline, playback, video export | Next |
@@ -41,16 +41,18 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
    - Dates beyond the forecast range say so plainly instead of guessing. (Long-term climate averages would need a second source; Open-Meteo's free tier is non-commercial, so it would need their paid plan.)
 4. ~~**Real-world light colour (white balance) through the day**~~ Done 26 Sep 2026.
    - As the sun nears the horizon the whole scene warms like real light: neutral daylight (about 5500 K) at high sun, warming through golden hour (sun below about 6°) to deep orange at sunset, then the cool blue of blue hour (sun 4° to 6° below the horizon) and dark night after that.
-   - Driven by the real sun elevation at the pin, so it follows the time and date sliders, the arc and (later) keyframed clips.
+   - Driven by the real sun elevation at the pin, so it follows the time and date sliders, the sun chart and (later) keyframed clips.
    - Sunlit ground takes the warm sun colour, shadows take the cooler sky-blue fill, and the sky and horizon haze change with it.
    - Drawn into the map image itself (not a screen overlay), so exported videos include it. An on/off toggle keeps a neutral view for plain scouting.
-5. **Apple-style redesign** (after phase 4, requested 26 Sep 2026, waiting on approval of the mockup)
-   - Frosted-glass panels, Apple system fonts, iOS-style switches and segmented controls, round map buttons.
-   - Sun scene: clean sun disc with a soft glow and no thick outline, thin gradient sun path with soft light under it, hairline dashed solstice paths, glass labels.
-   - Thin lines everywhere (compass, sun paths, sliders), soft near-black instead of pure black, a white Apple Weather-style sun.
-   - Time scrubber redesigned after Apple Weather's sun chart: sun height through 24 h, horizon line, day part lit, twilight dots, first light / sunrise / sunset / last light / daylight.
-   - Lens look on the map: a subtle tilt-shift blur at the top and bottom edges with slight chromatic aberration and vignette, like a vintage lens (strength adjustable, off switch).
-   - Mockup: the "Helios Apple-style mockup" design canvas (desktop, phone with a weather warning, and a before/after of the sun).
+5. ~~**Redesign: the Frost HUD**~~ Done 26 Sep 2026. Chosen from the mockup canvas: the Frostpunk 2 inspired board with the Apple-style sun and lens.
+   - Dark frosted-glass panels with thin corner brackets, condensed capital labels (Barlow Condensed), iOS switches, soft near-black instead of pure black.
+   - Desktop HUD: top bar (location, sun height, azimuth, sunrise, sunset, golden hour, daylight, air and wind, typed date and time), 9-day forecast strip, alerts (weather, golden hour, blue hour), tool dock (route, place, import), sun chart at the bottom.
+   - Sun scene: hairline ring and paths, white sun with a warm glow, gradient day path, glass labels.
+   - Lens look (switch and strength slider): soft chromatic aberration, tilt-shift, lens dirt lit by the sun, dust, frost in the corners, vignette, edge blur and film grain.
+6. **Photo spots** (next, requested 26 Sep 2026)
+   - A layer of geotagged photos from Wikimedia Commons around the view: each where the camera stood, with an arrow for the direction it faced when the file records it. Free, and most can be used in paid work with credit.
+   - Click one to see it, its author and licence, and jump to its date and time like your own photos.
+   - Flickr could follow later; its API needs Flickr's approval for commercial use.
 
 ## Using it
 
@@ -67,18 +69,21 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 
 ### Sun and shadows
 
-- The card in the top-right shows the time at the pin (in the pin's own timezone), the sun's elevation and azimuth, and sunrise and sunset.
+- **Top bar** (desktop): where the pin is (name, ground height), then the sun at the viewed moment: height, azimuth, sunrise, sunset, the start of the evening golden hour, daylight, and air temperature and wind. On the right: the date and time at the pin (in the pin's own timezone) and **Now**. Narrower windows drop the less important numbers.
 - **Type a time or date:** click the time or the date and type over it, then press Enter. Times: `06:47`, `647`, `6.47`, `6:47 pm`. Dates: `12 Oct 2026`, `12 october`, `12/10/2026` (day first), `2026-10-12`. Esc cancels. Changing one keeps the other.
-- **Summer solstice / Winter solstice** (under the time) jump to that day, keeping the time. South of the equator they swap months.
-- **Time slider:** sunrise to sunset. Press **24 h** to cover the whole day.
-- **Date slider:** 1 January to 31 December. The marks are the equinoxes and solstices; **Mar / Jun / Sep / Dec** jump straight to them.
+- **Sun chart** (bottom): the day like Apple Weather's sun chart. Time runs across, the sun's height up, the line across is the horizon. Golden hours are marked amber on the curve and blue hours blue. Drag anywhere on it to change the time; with keyboard focus, arrow keys step 5 minutes (Shift: 30), Home and End jump to sunrise and sunset.
+- **Date slider** (under the chart): 1 January to 31 December. The marks are the equinoxes and solstices; **Mar / Jun / Sep / Dec** jump straight to them.
+- **Summer solstice / Winter solstice** jump to that day, keeping the time. South of the equator they swap months.
+- **Forecast strip** (top): the next 9 days at the pin: sky, high temperature, a bar for how good the daylight is for light and shadows (clear is full amber, cloud and rain grey), and flags like OVERCAST AM or RAIN PM. Click a day to jump to it, keeping the time.
+- **Alerts** (right): the weather at the viewed moment (turns into an orange warning with a × when the light will be poor), and the day's morning and evening golden hour (sun from the horizon to 6° up) and blue hour (4° to 6° below).
 - **Now** jumps to the current time.
-- **Weather** (under the solstice buttons): the forecast at the pin for the chosen time, from MET Norway: sky, temperature, wind, and rain or snow when there is some. Hourly for the next 2 to 3 days, then in 6-hour blocks, up to about 9 days ahead. Past times and dates further out say so instead of guessing.
-- **Weather warning:** a small dark note floats at the top when the forecast is poor for light and shadows (overcast, fog, rain, sleet, snow, thunder, or wind from 39 km/h), e.g. "Overcast at 08:00 · shadows won't show". × hides it for that forecast slot.
-- **Sun arc** (bottom): drag or click the sun along the arc to change the time. When it has keyboard focus, arrow keys step 5 minutes (Shift: 30), Home and End jump to sunrise and sunset.
+- **Weather** (in the alerts; on a phone under the solstice buttons): the forecast at the pin for the chosen time, from MET Norway: sky, temperature, wind, and rain or snow when there is some. Hourly for the next 2 to 3 days, then in 6-hour blocks, up to about 9 days ahead. Past times and dates further out say so instead of guessing.
+- **Weather warning** (phone): a small dark note floats at the top when the forecast is poor for light and shadows (overcast, fog, rain, sleet, snow, thunder, or wind from 39 km/h), e.g. "Overcast at 08:00 · shadows won't show". × hides it for that forecast slot.
 - **Cast shadows** (layer panel) shows where the terrain blocks the sun. Quality: Low, Medium (default), High. High loads more detailed elevation and takes longer to draw.
 - The relief shading on Paper and Terrain is lit from the real sun direction too.
 - **Golden hour light** (layer panel, on by default): the whole map takes the colour of the real light. Neutral when the sun is high, warming from about 12° down to a deep orange at sunset, then the blue of blue hour (sun 4° to 6° below the horizon) and a dim blue night. Shadows cool toward sky blue as the sun gets low, like real shadows lit by the sky. It's drawn into the map image itself, so video export will include it; labels stay neutral. Turn it off for a plain scouting view.
+
+- **Lens look** (layer panel, on by default, with a strength slider): the look of a vintage lens. Soft red/blue fringes on edges, a tilt-shift blur toward the top and bottom, lens dirt that glows near the sun, dust specks and a little frost in the corners are drawn into the map image (so video export will carry them); a slight vignette, a blur that feathers in toward the edges and film grain cover the whole screen, panels included. It's all measured in screen pixels, so zooming never changes it.
 
 ### Sun in 3D
 
@@ -90,7 +95,7 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 
 ### Your routes, places and photos
 
-In the layer panel under **Your layers** (on a phone: the Layers button):
+In the layer panel under **Your layers** (on a phone: the Layers button), or from the tool dock at the bottom right (Route, Place, Import):
 
 - **Import…** or drop files anywhere on the map: GPX, KML and GeoJSON routes, and photos (JPEG or HEIC). The map zooms to what you added. Waypoints and points in the files become places.
 - **Routes:** each gets its own colour; click the dot to change it, click the name to rename. **Draw route** lets you click points on the map; double-click, Enter or **Done** finishes, Backspace undoes the last point, Esc cancels. On a phone: tap points, then Done.
@@ -107,9 +112,9 @@ In the layer panel under **Your layers** (on a phone: the Layers button):
 | 2 fingers: pinch / twist | Move closer or further / turn the view |
 | 3 fingers drag | Orbit: up/down tilts, left/right turns |
 
-The map fills the screen. The sun summary sits under the search bar (tap the arrow for the sliders), the sun arc is at the bottom, and the layers button opens the layer panel and camera readout as a sheet. A short tutorial shows the gestures on the first visit; the **?** button brings it back (on a computer it shows the mouse controls).
+The map fills the screen. The sun summary sits under the search bar (tap the arrow for the sun details, the 9-day forecast and the sliders), the sun chart is at the bottom, and the layers button opens the layer panel and camera readout as a sheet. A short tutorial shows the gestures on the first visit; the **?** button brings it back (on a computer it shows the mouse controls).
 
-The readout in the bottom-left shows the view centre (lat, lng), the camera's height above the ground under it, bearing and pitch. Click any value, type a new one and press Enter (heights accept `850`, `850 m` or `1.2 km`).
+The readout in the bottom-left (in the layer panel on windows narrower than 1400 px) shows the view centre (lat, lng), the camera's height above the ground under it, bearing and pitch. Click any value, type a new one and press Enter (heights accept `850`, `850 m` or `1.2 km`).
 
 Search finds places by name, or paste coordinates straight from Google Maps (`46.60068, 11.72598`).
 
@@ -164,6 +169,8 @@ Shadows are computed from the elevation data: for every ground point Helios walk
 
 Terrain data is about 30 m resolution: good for large-scale light and shadow on ridges and valleys, too coarse for single rocks or buildings. A higher-resolution South Tyrol LiDAR option is planned for phase 6.
 
+Fonts: Barlow and Barlow Condensed (SIL Open Font License), loaded from Google Fonts.
+
 Libraries: MapLibre GL JS (BSD-3), maplibre-contour (BSD-3), React (MIT), Zustand (MIT), @photostructure/tz-lookup (CC0, timezone from coordinates), @tmcw/togeojson (BSD-2, GPX and KML import), exifr (MIT, photo GPS and capture time). Tests only: Vitest (MIT), happy-dom (MIT).
 
 ## Project layout
@@ -171,12 +178,12 @@ Libraries: MapLibre GL JS (BSD-3), maplibre-contour (BSD-3), React (MIT), Zustan
 ```
 src/
   map/     MapLibre setup, style and base layers, camera controls, tile sources, shadow layer
-  scene/   3D sun scene: compass ring, sun paths, sun, labels, dragging; golden/blue hour light colour
+  scene/   3D sun scene: compass ring, sun paths, sun, labels, dragging; golden/blue hour light colour; lens look
   sun/     sun position, sunrise and sunset, seasons, timezones, inverse solver for dragging
   terrain/ elevation tiles, height mosaic, shadow ray-march (CPU reference and GPU shader)
   weather/ MET Norway forecast: fetching, picking the slot for a time, warnings
   layers/  your routes, places and photos: file import (GPX/KML/GeoJSON, EXIF), map drawing, photo storage
   store/   app state (Zustand), saved in the browser
-  ui/      panels, search, readout, theme
+  ui/      HUD: top bar, forecast, alerts, sun chart, tool dock, panels, search, readout, lens overlay, theme
 tests/     unit tests
 ```

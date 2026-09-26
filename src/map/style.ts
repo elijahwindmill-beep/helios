@@ -27,6 +27,8 @@ export interface Overlays {
   routes: boolean;
   places: boolean;
   photos: boolean;
+  /** Lens look: soft aberration, tilt-shift, dirt, dust, grain, vignette (scene/lens.ts, ui/LensOverlay.tsx). */
+  lens: boolean;
 }
 
 // Paper tokens from the brief / mockup A.

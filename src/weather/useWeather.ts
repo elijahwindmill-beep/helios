@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { create } from 'zustand';
 import { useApp } from '../store/app';
 import { sunPosition } from '../sun/position';
-import { assess, fetchForecast, forecastAt, forecastKey, type Assessment, type Forecast, type ForecastAt } from './metno';
+import { assess, dailyForecast, fetchForecast, forecastAt, forecastKey, type Assessment, type DaySummary, type DayWindow, type Forecast, type ForecastAt } from './metno';
+import { dayTimesCached } from '../sun/dayCache';
+import { startOfZonedDay, timeZoneAt } from '../sun/timezone';
 
 type Load = { status: 'loading' } | { status: 'error' } | { status: 'ok'; forecast: Forecast };
 
@@ -32,18 +34,24 @@ export type Weather =
   | ({ status: 'ok' } & Exclude<ForecastAt, { kind: 'ok' }>)
   | { status: 'ok'; kind: 'ok'; entry: Extract<ForecastAt, { kind: 'ok' }>['entry']; assessment: Assessment };
 
-/** Forecast at the pin for the viewed moment. */
-export function useWeather(): Weather {
+/** The forecast for the pin, loading it (after the pin settles) when needed. */
+function usePinForecast(): Load | undefined {
   const { lat, lng } = useApp((s) => s.pin);
-  const time = useApp((s) => s.time);
   const key = forecastKey(lat, lng);
   const state = useForecasts((s) => s.byKey[key]);
-
   // Wait until the pin settles before asking MET for a new place.
   useEffect(() => {
     const id = setTimeout(() => load(lat, lng), 400);
     return () => clearTimeout(id);
   }, [key]);
+  return state;
+}
+
+/** Forecast at the pin for the viewed moment. */
+export function useWeather(): Weather {
+  const { lat, lng } = useApp((s) => s.pin);
+  const time = useApp((s) => s.time);
+  const state = usePinForecast();
 
   // Also refresh an expired forecast when the viewed time changes.
   useEffect(() => {
@@ -56,4 +64,24 @@ export function useWeather(): Weather {
   if (at.kind !== 'ok') return { status: 'ok', ...at };
   const sunUp = sunPosition(time, lat, lng).elevation > 0;
   return { status: 'ok', kind: 'ok', entry: at.entry, assessment: assess(at.entry, sunUp) };
+}
+
+export interface ForecastDay extends DayWindow {
+  summary: DaySummary | null;
+}
+
+/** The next `count` local days at the pin, starting today, with a daylight summary where the forecast reaches. */
+export function useForecastDays(count = 9): { status: Load['status'] | 'loading'; days: ForecastDay[] } {
+  const { lat, lng } = useApp((s) => s.pin);
+  const state = usePinForecast();
+  const timeZone = timeZoneAt(lat, lng);
+  const days: DayWindow[] = [];
+  let start = startOfZonedDay(Date.now(), timeZone);
+  for (let i = 0; i < count; i++) {
+    const d = dayTimesCached(start + 12 * 3600000, lat, lng, timeZone);
+    days.push({ start: d.dayStart, end: d.dayEnd, sunrise: d.sunrise, sunset: d.sunset, noon: d.solarNoon });
+    start = d.dayEnd;
+  }
+  const summaries = state?.status === 'ok' ? dailyForecast(state.forecast, days) : days.map(() => null);
+  return { status: state?.status ?? 'loading', days: days.map((d, i) => ({ ...d, summary: summaries[i] })) };
 }

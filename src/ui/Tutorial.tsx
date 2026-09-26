@@ -144,7 +144,7 @@ export function Tutorial() {
           ))}
         </ol>
         <p className="muted tutorial-foot">
-          Change the time with the sun arc at the bottom. Open this again any time with the ? button.
+          Drag across the sun chart at the bottom to change the time. Open this again any time with the ? button.
         </p>
         <button className="primary tutorial-ok" onClick={() => useApp.getState().closeTutorial()}>
           Got it

@@ -15,10 +15,13 @@ import { invert, multiply, pixelRay, raySphere, toScreen, transform, type Mat4, 
 // The sky is a dome centred on the pin; a sun direction (azimuth, elevation) sits on it at
 // the dome radius. The radius follows the zoom so the ring keeps a steady size on screen.
 
-const AMBER = '#E8A317';
-const AMBER_LINE = '#C98A0F';
-const INK = '#1F1D1A';
-const PAPER = '#FBFAF7';
+// Thin, light lines like Apple Weather's sun chart, with dark glass labels (the Frost HUD).
+const AMBER = '#F5A623';
+const WHITE = 'rgba(255,255,255,0.9)';
+const GLASS = 'rgba(24,29,35,0.72)';
+const HUD = '"Barlow Condensed", "Barlow", sans-serif';
+/** Soft dark shadow under thin light lines, so they read on snow and bright rock. */
+const LINE_SHADOW = 'rgba(8,12,18,0.45)';
 
 /** Sun and its reach, in CSS pixels. */
 const SUN_HIT_PX = 28;
@@ -59,6 +62,10 @@ function pathRuns(dayStart: number, dayEnd: number, lat: number, lng: number): P
     r.map((p, i) => (i === 0 || i === r.length - 1) && p.dir[2] < 0.02 ? { t: p.t, dir: [p.dir[0], p.dir[1], 0] as Vec3 } : p),
   );
 }
+
+// Where the sun was last drawn on screen (CSS px in the map), for the lens dirt glow.
+let lastSunScreen: [number, number] | null = null;
+export const getSunScreen = () => lastSunScreen;
 
 export function installSunScene(map: MlMap): () => void {
   const container = map.getCanvasContainer();
@@ -125,6 +132,7 @@ export function installSunScene(map: MlMap): () => void {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     sunScreen = null;
+    lastSunScreen = null;
     const s = useApp.getState();
     const { compass, sunPath, solstices } = s.overlays;
     if (!matrix || !(compass || sunPath || solstices)) return;
@@ -192,13 +200,14 @@ export function installSunScene(map: MlMap): () => void {
         ctx.closePath();
         si.forEach((q, i) => (i ? ctx.lineTo(q![0], q![1]) : ctx.moveTo(q![0], q![1])));
         ctx.closePath();
-        ctx.fillStyle = 'rgba(251,250,247,0.62)';
+        ctx.fillStyle = 'rgba(255,255,255,0.24)';
         ctx.fill('evenodd');
       }
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(31,29,26,0.35)';
+      ctx.lineWidth = 0.75;
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
       polyline(outer, true);
       ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
       polyline(inner, true);
       ctx.stroke();
       for (let deg = 0; deg < 360; deg += 10) {
@@ -209,15 +218,15 @@ export function installSunScene(map: MlMap): () => void {
           [Math.sin(a) * r0, Math.cos(a) * r0, 0],
           [Math.sin(a), Math.cos(a), 0],
         ]);
-        ctx.strokeStyle = major ? 'rgba(31,29,26,0.7)' : 'rgba(31,29,26,0.4)';
-        ctx.lineWidth = major ? 1.4 : 1;
+        ctx.strokeStyle = major ? 'rgba(20,24,29,0.6)' : 'rgba(20,24,29,0.32)';
+        ctx.lineWidth = major ? 0.9 : 0.6;
         ctx.stroke();
         if (major) {
           const cardinal = { 0: 'N', 90: 'E', 180: 'S', 270: 'W' }[deg];
           const q = S([Math.sin(a) * 1.1, Math.cos(a) * 1.1, 0]);
           if (q)
             label(cardinal ? 3 : 1, () =>
-              text(q, cardinal ?? String(deg), cardinal ? '600 13px "Instrument Sans", sans-serif' : '500 10px "JetBrains Mono", monospace', cardinal ? INK : 'rgba(31,29,26,0.75)'),
+              text(q, cardinal ?? String(deg), cardinal ? `600 14px ${HUD}` : `500 11px ${HUD}`, cardinal ? '#ffffff' : 'rgba(255,255,255,0.78)'),
             );
         }
       }
@@ -228,20 +237,19 @@ export function installSunScene(map: MlMap): () => void {
       for (const ref of dp.refs) {
         ctx.save();
         ctx.lineCap = 'round';
-        ctx.setLineDash(ref.style === 'dash' ? [7, 6] : [1, 6]);
+        ctx.setLineDash(ref.style === 'dash' ? [4, 5] : [0.1, 5]);
+        ctx.shadowColor = LINE_SHADOW;
+        ctx.shadowBlur = 3;
         for (const run of ref.runs) {
           polyline(run.map((p) => p.dir));
-          ctx.strokeStyle = 'rgba(31,29,26,0.45)';
-          ctx.lineWidth = ref.style === 'dash' ? 3.5 : 4.5;
-          ctx.stroke();
-          ctx.strokeStyle = 'rgba(251,250,247,0.95)';
-          ctx.lineWidth = ref.style === 'dash' ? 2 : 3;
+          ctx.strokeStyle = 'rgba(255,255,255,0.82)';
+          ctx.lineWidth = ref.style === 'dash' ? 0.9 : 1.6;
           ctx.stroke();
         }
         ctx.restore();
         if (ref.apex) {
           const q = S(ref.apex.dir);
-          if (q) label(2, () => pill([q[0], q[1] - 14], ref.label, 'rgba(59,74,90,0.88)', PAPER, '500 11px "Instrument Sans", sans-serif'));
+          if (q) label(2, () => pill([q[0], q[1] - 14], ref.label, 'rgba(24,29,35,0.55)', '#ffffff', `500 12px ${HUD}`));
         }
       }
     }
@@ -251,18 +259,30 @@ export function installSunScene(map: MlMap): () => void {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       for (const run of dp.today) {
+        const pts = run.map((p) => S(p.dir)).filter((q): q is [number, number] => q !== null);
+        if (pts.length < 2) continue;
+        // Soft light under a thin warm path that deepens toward sunset.
         polyline(run.map((p) => p.dir));
-        ctx.strokeStyle = 'rgba(31,29,26,0.35)';
-        ctx.lineWidth = 5;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(245,166,35,0.35)';
+        ctx.lineWidth = 6;
+        ctx.filter = 'blur(3px)';
         ctx.stroke();
-        ctx.strokeStyle = AMBER;
-        ctx.lineWidth = 3;
+        ctx.restore();
+        const xs = pts.map((q) => q[0]);
+        const grad = ctx.createLinearGradient(Math.min(...xs), 0, Math.max(...xs), 0);
+        grad.addColorStop(0, '#ffd98a');
+        grad.addColorStop(0.5, AMBER);
+        grad.addColorStop(1, '#ff9a55');
+        polyline(run.map((p) => p.dir));
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1.5;
         ctx.stroke();
       }
       for (const b of [dp.rise, dp.set]) {
         if (!b) continue;
         const q = S(b.dir);
-        if (q) label(8, () => pill(q, formatClock(b.t, tz), AMBER, INK, '600 11px "JetBrains Mono", monospace'));
+        if (q) label(8, () => pill(q, formatClock(b.t, tz), GLASS, '#ffd58a', `600 12px ${HUD}`));
       }
 
       const sun = sunPosition(s.time, pin.lat, pin.lng);
@@ -271,43 +291,46 @@ export function installSunScene(map: MlMap): () => void {
       const groundDir: Vec3 = [dir[0] / Math.hypot(dir[0], dir[1]), dir[1] / Math.hypot(dir[0], dir[1]), 0];
 
       // Direction on the ground and the ray from the pin to the sun.
-      ctx.setLineDash([4, 4]);
-      ctx.lineWidth = 1.2;
-      ctx.strokeStyle = 'rgba(31,29,26,0.6)';
+      ctx.save();
+      ctx.shadowColor = LINE_SHADOW;
+      ctx.shadowBlur = 3;
+      ctx.setLineDash([2, 4]);
+      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = WHITE;
       polyline([[0, 0, 0], groundDir]);
       ctx.stroke();
       ctx.setLineDash([]);
       if (aboveHorizon) {
         polyline([[0, 0, 0], dir]);
-        ctx.strokeStyle = AMBER_LINE;
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(245,166,35,0.9)';
+        ctx.lineWidth = 0.9;
         ctx.stroke();
       }
+      ctx.restore();
 
       const az = S([groundDir[0] * 1.02, groundDir[1] * 1.02, 0]);
-      if (az) label(6, () => pill(az, `${sun.azimuth.toFixed(1)}°`, 'rgba(251,250,247,0.95)', INK, '500 11px "JetBrains Mono", monospace'));
+      if (az) label(6, () => pill(az, `${sun.azimuth.toFixed(1)}°`, GLASS, '#ffffff', `500 12px ${HUD}`));
       if (aboveHorizon) {
         const el = S([dir[0] * 0.45, dir[1] * 0.45, dir[2] * 0.45]);
-        if (el) label(6, () => pill([el[0] + 30, el[1]], `△ ${sun.elevation.toFixed(1)}°`, 'rgba(251,250,247,0.95)', INK, '500 11px "JetBrains Mono", monospace'));
+        if (el) label(6, () => pill([el[0] + 30, el[1]], `△ ${sun.elevation.toFixed(1)}°`, GLASS, '#ffffff', `500 12px ${HUD}`));
         const q = S(dir);
         if (q) {
           sunScreen = q;
-          const glow = ctx.createRadialGradient(q[0], q[1], 4, q[0], q[1], 34);
-          glow.addColorStop(0, 'rgba(255,214,102,0.95)');
-          glow.addColorStop(0.45, 'rgba(232,163,23,0.45)');
-          glow.addColorStop(1, 'rgba(232,163,23,0)');
+          // A white sun with a warm glow, like Apple Weather.
+          const glow = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], 40);
+          glow.addColorStop(0, 'rgba(255,255,255,1)');
+          glow.addColorStop(0.25, 'rgba(255,243,208,0.9)');
+          glow.addColorStop(0.6, 'rgba(245,166,35,0.28)');
+          glow.addColorStop(1, 'rgba(245,166,35,0)');
           ctx.fillStyle = glow;
           ctx.beginPath();
-          ctx.arc(q[0], q[1], 34, 0, 2 * Math.PI);
+          ctx.arc(q[0], q[1], 40, 0, 2 * Math.PI);
           ctx.fill();
           ctx.beginPath();
-          ctx.arc(q[0], q[1], 12, 0, 2 * Math.PI);
-          ctx.fillStyle = AMBER;
+          ctx.arc(q[0], q[1], 8.5, 0, 2 * Math.PI);
+          ctx.fillStyle = '#fffdf6';
           ctx.fill();
-          ctx.lineWidth = 2;
-          ctx.strokeStyle = INK;
-          ctx.stroke();
-          label(10, () => pill([q[0] + 44, q[1]], formatClock(s.time, tz), PAPER, INK, '600 13px "JetBrains Mono", monospace'));
+          label(10, () => pill([q[0] + 44, q[1]], formatClock(s.time, tz), GLASS, '#ffffff', `600 14px ${HUD}`));
           placed.push([q[0] - 14, q[1] - 14, q[0] + 14, q[1] + 14]); // the sun itself
         }
       }
@@ -315,6 +338,7 @@ export function installSunScene(map: MlMap): () => void {
 
     labels.sort((a, b) => b.priority - a.priority);
     for (const l of labels) l.draw();
+    lastSunScreen = sunScreen;
   };
 
   // Screen boxes of labels drawn this frame: [x0, y0, x1, y1].
@@ -338,7 +362,7 @@ export function installSunScene(map: MlMap): () => void {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineWidth = 3;
-    ctx.strokeStyle = 'rgba(251,250,247,0.85)';
+    ctx.strokeStyle = 'rgba(20,24,29,0.55)';
     ctx.strokeText(s, q[0], q[1]);
     ctx.fillStyle = color;
     ctx.fillText(s, q[0], q[1]);
@@ -353,11 +377,11 @@ export function installSunScene(map: MlMap): () => void {
     const x = q[0] - w / 2;
     const y = q[1] - h / 2;
     ctx.beginPath();
-    ctx.roundRect(x, y, w, h, 7);
+    ctx.roundRect(x, y, w, h, h / 2);
     ctx.fillStyle = bg;
     ctx.fill();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(31,29,26,0.25)';
+    ctx.lineWidth = 0.5;
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
     ctx.stroke();
     ctx.fillStyle = fg;
     ctx.textAlign = 'center';

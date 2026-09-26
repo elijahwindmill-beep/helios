@@ -14,6 +14,7 @@ import { installShadowLayer } from './shadowLayer';
 import { installSunScene } from '../scene/sunScene';
 import { installLightColour } from '../scene/lightColour';
 import { installUserLayers } from '../layers/userLayers';
+import { installLens } from '../scene/lens';
 import { useLayers } from '../store/layers';
 import { writeTimeToUrl } from '../store/urlTime';
 import { COMPACT_QUERY } from '../ui/useMedia';
@@ -140,12 +141,15 @@ export function MapView() {
     let removeScene = () => {};
     let removeLight = () => {};
     let removeUser = () => {};
+    let removeLens = () => {};
     map.once('load', () => {
       removeShadows = installShadowLayer(map, 'contour-minor');
       // Under the labels so they keep their colour.
       removeLight = installLightColour(map, 'contour-label');
       // Above the light colour and contours, under the labels: routes keep their own colours.
       removeUser = installUserLayers(map, 'contour-label');
+      // Last layer, so it sees the whole finished frame.
+      removeLens = installLens(map);
       removeScene = installSunScene(map);
     });
     writeTimeToUrl(s.time);
@@ -193,6 +197,7 @@ export function MapView() {
       removeScene();
       removeLight();
       removeUser();
+      removeLens();
       removeControls();
       cancelAnimationFrame(raf);
       setMap(null);

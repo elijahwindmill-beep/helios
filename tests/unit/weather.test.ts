@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assess, forecastAt, parseForecast, type ForecastEntry } from '../../src/weather/metno';
+import { assess, dailyForecast, forecastAt, parseForecast, type ForecastEntry } from '../../src/weather/metno';
 
 const H = 3600000;
 const T0 = Date.parse('2026-09-26T10:00:00Z');
@@ -61,5 +61,47 @@ describe('MET Norway forecast', () => {
     expect(assess(entry('clearsky', 12), true).warning).toBe('Strong wind · 43 km/h');
     expect(assess(entry('cloudy', 12), true).warning).toBe("Overcast · shadows won't show · wind 43 km/h");
     expect(assess(entry('clearsky', 10), true).warning).toBeNull();
+  });
+});
+
+describe('daily forecast', () => {
+  const D = Date.parse('2026-09-29T00:00:00Z');
+  const hour = (h: number, symbol: string, cloud: number, temperature = 8): ForecastEntry => ({
+    time: D + h * H,
+    span: H,
+    symbol,
+    temperature,
+    cloud,
+    wind: 2,
+    precipitation: 0,
+  });
+  const day = { start: D, end: D + 24 * H, sunrise: D + 6 * H, sunset: D + 18 * H, noon: D + 12 * H };
+  const run = (entries: ForecastEntry[]) => dailyForecast({ entries, expires: 0 }, [day])[0];
+
+  it('flags overcast mornings and scores the light', () => {
+    const entries = Array.from({ length: 24 }, (_, h) => (h < 11 ? hour(h, 'cloudy', 98, 5) : hour(h, 'clearsky', 5, 12)));
+    const d = run(entries)!;
+    expect(d.note).toBe('OVERCAST AM');
+    expect(d.tempMax).toBe(12);
+    expect(d.tempMin).toBe(5);
+    expect(d.light).toBeGreaterThan(40);
+    expect(d.light).toBeLessThan(60);
+  });
+
+  it('a clear day has no note and high light', () => {
+    const d = run(Array.from({ length: 24 }, (_, h) => hour(h, 'clearsky', 0)))!;
+    expect(d).toMatchObject({ sky: 'clear', note: null, light: 100 });
+  });
+
+  it('rain in the afternoon caps the light and shows on the icon', () => {
+    const d = run(Array.from({ length: 24 }, (_, h) => (h >= 13 && h < 17 ? hour(h, 'rain', 100) : hour(h, 'partlycloudy', 40))))!;
+    expect(d.note).toBe('RAIN PM');
+    expect(d.light).toBeLessThanOrEqual(20);
+    expect(d.sky).toBe('rain');
+  });
+
+  it('days beyond the forecast are null', () => {
+    const later = { ...day, start: day.start + 20 * 24 * H, end: day.end + 20 * 24 * H, sunrise: null, sunset: null, noon: day.noon + 20 * 24 * H };
+    expect(dailyForecast({ entries: [hour(8, 'clearsky', 0)], expires: 0 }, [later])[0]).toBeNull();
   });
 });

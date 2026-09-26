@@ -1,22 +1,30 @@
-/* Design tokens from the brief. Paper is the default; Alpenglow (dark) arrives in phase 6. */
-:root,
-[data-theme='paper'] {
-  --bg: #f4f1ea;
-  --surface: #fbfaf7;
-  --surface-sunk: #ede9df;
-  --ink: #1f1d1a;
-  --ink-2: #4a463f;
-  --muted: #6b665c;
-  --hairline: #ddd8cc;
-  --hairline-soft: #ece8dd;
-  --accent: #e8a317;
-  --accent-line: #c98a0f;
-  --slate: #3b4a5a;
-  --track-off: #d5cfc0;
-  --shadow: 0 1px 2px rgba(31, 29, 26, 0.06);
-  --font-ui: 'Instrument Sans', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --font-title: 'Newsreader', Georgia, serif;
+/* Design tokens: the "Frost" HUD (inspired by Frostpunk 2's town view). Dark frosted glass,
+   condensed capital labels, amber for the sun, soft near-black (never pure black). */
+:root {
+  --bg: #1a1f24;
+  --surface: rgba(24, 29, 35, 0.66);
+  --surface-solid: #20262d;
+  --surface-sunk: rgba(255, 255, 255, 0.07);
+  --ink: #edf1f4;
+  --ink-2: #c3ccd3;
+  --muted: #9aa6b0;
+  --hairline: rgba(214, 232, 244, 0.16);
+  --hairline-soft: rgba(214, 232, 244, 0.09);
+  --accent: #f5a623;
+  --accent-line: #f5a623;
+  --gold: #ffd58a;
+  --blue: #9fc4ff;
+  --warn: #ff9a6b;
+  --slate: #9fb4c6;
+  --track-off: rgba(160, 170, 180, 0.3);
+  --track-on: #30c05a;
+  --shadow: 0 14px 40px rgba(8, 12, 18, 0.35);
+  --glass: blur(26px) saturate(140%);
+  --bracket: rgba(214, 232, 244, 0.5);
+  --font-ui: 'Barlow', system-ui, sans-serif;
+  --font-hud: 'Barlow Condensed', 'Barlow', sans-serif;
+  --font-mono: 'Barlow Condensed', 'Barlow', sans-serif;
+  --font-title: 'Barlow Condensed', 'Barlow', sans-serif;
 }
 
 * {
@@ -49,6 +57,37 @@ button {
 }
 .mono {
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+/* HUD type: small spaced capitals for labels, condensed figures for values. */
+.hud-label {
+  font-family: var(--font-hud);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.hud-value {
+  font-family: var(--font-hud);
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.hud-unit {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+.hud-value[data-tone='accent'] {
+  color: var(--accent);
+}
+.hud-value[data-tone='gold'] {
+  color: var(--gold);
 }
 
 .app {
@@ -63,9 +102,34 @@ button {
 
 .panel {
   background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: 16px;
+  -webkit-backdrop-filter: var(--glass);
+  backdrop-filter: var(--glass);
+  border: 0.5px solid var(--hairline);
+  border-radius: 12px;
   box-shadow: var(--shadow);
+}
+/* Thin corner brackets just outside HUD panels. */
+.top-bar::after,
+.forecast::after,
+.alerts::after,
+.tool-dock::after,
+.sun-chart::after,
+.layer-panel::after,
+.readout-floating::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  pointer-events: none;
+  --b: linear-gradient(var(--bracket), var(--bracket));
+  background:
+    var(--b) left top / 10px 1px no-repeat,
+    var(--b) left top / 1px 10px no-repeat,
+    var(--b) right top / 10px 1px no-repeat,
+    var(--b) right top / 1px 10px no-repeat,
+    var(--b) left bottom / 10px 1px no-repeat,
+    var(--b) left bottom / 1px 10px no-repeat,
+    var(--b) right bottom / 10px 1px no-repeat,
+    var(--b) right bottom / 1px 10px no-repeat;
 }
 
 /* ---------- Left layer panel ---------- */
@@ -118,7 +182,7 @@ button {
   background: var(--surface);
   color: var(--ink);
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(31, 29, 26, 0.12);
+  box-shadow: none;
 }
 .imagery {
   margin: -4px 0 16px;
@@ -136,7 +200,7 @@ button {
   padding: 0 10px;
   border: 1px solid var(--hairline);
   border-radius: 10px;
-  background: var(--surface);
+  background: var(--surface-solid);
   font-size: 13px;
 }
 .licence {
@@ -149,7 +213,7 @@ button {
   background: var(--surface-sunk);
 }
 .licence-no {
-  background: #f6e3d9;
+  background: rgba(255, 122, 69, 0.16);
 }
 .overlays-heading {
   margin-bottom: 4px;
@@ -195,11 +259,12 @@ button {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--surface);
+  background: #f4f6f8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   transition: left 150ms;
 }
 .toggle[aria-pressed='true'] .switch {
-  background: var(--ink);
+  background: var(--track-on);
 }
 .toggle[aria-pressed='true'] .knob {
   left: 16px;
@@ -329,9 +394,15 @@ button {
   left: 24px;
   bottom: 24px;
   display: flex;
-  gap: 2px;
-  padding: 6px;
-  border-radius: 14px;
+  gap: 0;
+  padding: 6px 4px;
+}
+.readout-floating .readout-field + .readout-field {
+  border-left: 1px solid var(--hairline-soft);
+}
+.readout-floating .readout-field input {
+  width: 7.2ch;
+  font-size: 16px;
 }
 .readout-field {
   display: flex;
@@ -343,8 +414,10 @@ button {
   background: var(--surface-sunk);
 }
 .readout-label {
-  font-size: 10px;
-  letter-spacing: 0.08em;
+  font-family: var(--font-hud);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -407,7 +480,7 @@ button {
 .place-name {
   padding: 2px 8px;
   border-radius: 7px;
-  background: rgba(251, 250, 247, 0.92);
+  background: rgba(24, 29, 35, 0.78);
   font-size: 12px;
   font-weight: 600;
   color: var(--ink);
@@ -596,9 +669,10 @@ button {
   background: var(--surface);
 }
 .chip.chip-primary {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--surface);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a1f24;
+  font-weight: 600;
 }
 .chip:disabled {
   opacity: 0.4;
@@ -1002,36 +1076,38 @@ input.sun-date {
   cursor: pointer;
 }
 .range::-webkit-slider-runnable-track {
-  height: 4px;
+  height: 2px;
   border-radius: 2px;
   background: var(--hairline);
 }
 .range::-moz-range-track {
-  height: 4px;
+  height: 2px;
   border-radius: 2px;
   background: var(--hairline);
 }
 .range-time::-webkit-slider-runnable-track {
-  background: linear-gradient(90deg, #f3d9a0, var(--accent) 50%, #f3d9a0);
+  background: linear-gradient(90deg, rgba(245, 166, 35, 0.35), var(--accent) 50%, rgba(245, 166, 35, 0.35));
 }
 .range-time::-moz-range-track {
-  background: linear-gradient(90deg, #f3d9a0, var(--accent) 50%, #f3d9a0);
+  background: linear-gradient(90deg, rgba(245, 166, 35, 0.35), var(--accent) 50%, rgba(245, 166, 35, 0.35));
 }
 .range::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   margin-top: -7px;
   border-radius: 50%;
-  background: var(--surface);
-  border: 2px solid var(--ink);
+  background: #f4f6f8;
+  border: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 .range::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--surface);
-  border: 2px solid var(--ink);
+  background: #f4f6f8;
+  border: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 .notches {
   position: absolute;
@@ -1070,9 +1146,12 @@ input.sun-date {
   font-size: 13px;
 }
 .chip[aria-pressed='true'] {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--surface);
+  background: rgba(245, 166, 35, 0.16);
+  border-color: var(--accent);
+  color: var(--ink);
+}
+.chip:hover {
+  background: var(--surface-sunk);
 }
 .sun-seasons {
   display: flex;
@@ -1100,76 +1179,97 @@ input.sun-date {
   background: transparent;
 }
 
-/* ---------- Sun arc scrubber (bottom centre) ---------- */
-.sun-arc {
+/* ---------- Sun chart (bottom centre): the day like Apple Weather's sun chart ---------- */
+.sun-chart {
   position: absolute;
-  bottom: 24px;
-  /* Centred, but never over the camera readout on the left. */
-  left: max(50%, 820px);
+  left: 50%;
+  bottom: 20px;
   transform: translateX(-50%);
-  width: 440px;
-  padding: 6px 0 0;
-  border-radius: 20px;
+  width: 540px;
+  padding: 10px 14px 8px;
 }
-.sun-arc svg {
+.chart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.chart-svg {
   display: block;
   width: 100%;
   height: auto;
   touch-action: none;
-  cursor: grab;
-  outline-offset: -2px;
+  cursor: ew-resize;
+  outline-offset: 2px;
 }
-.sun-arc svg:active {
-  cursor: grabbing;
+.chart-hour {
+  stroke: rgba(255, 255, 255, 0.22);
+  stroke-width: 0.75;
+  stroke-dasharray: 2 3;
 }
-.arc-track {
+.chart-hour-label {
+  font-family: var(--font-hud);
+  font-size: 10px;
+  font-weight: 600;
+  fill: rgba(255, 255, 255, 0.55);
+}
+.chart-horizon {
+  stroke: rgba(255, 255, 255, 0.45);
+  stroke-width: 0.75;
+}
+.chart-curve {
   fill: none;
-  stroke: var(--hairline);
-  stroke-width: 4;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 1.5;
+}
+.chart-curve-below {
+  stroke: rgba(255, 255, 255, 0.28);
+}
+.chart-band {
+  fill: none;
+  stroke-width: 3;
   stroke-linecap: round;
 }
-.arc-done {
+.chart-band-gold {
+  stroke: var(--accent);
+  opacity: 0.9;
+}
+.chart-band-blue {
+  stroke: #6f9dff;
+  opacity: 0.9;
+}
+.chart-now {
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 0.75;
+}
+.chart-sun {
+  fill: #ffffff;
+}
+.chart-sun-night {
   fill: none;
-  stroke: var(--accent-line);
-  stroke-width: 4;
-  stroke-linecap: round;
+  stroke: rgba(255, 255, 255, 0.7);
+  stroke-width: 1.2;
 }
-.arc-hour {
-  fill: var(--muted);
-  opacity: 0.6;
+.chart-time {
+  font-family: var(--font-hud);
+  font-size: 13px;
+  font-weight: 600;
+  fill: #ffffff;
 }
-.arc-end {
-  fill: var(--surface);
-  stroke: var(--ink);
-  stroke-width: 2;
+.chart-controls {
+  margin-top: 4px;
 }
-.arc-glow {
-  fill: var(--accent);
-  opacity: 0.25;
+.chart-controls .slider-row {
+  height: 30px;
 }
-.arc-sun {
-  fill: var(--accent);
-  stroke: var(--ink);
-  stroke-width: 2;
+.chart-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.arc-sun-night {
-  fill: var(--muted);
-}
-.arc-label {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  fill: var(--ink-2);
-}
-.arc-now {
-  font-family: var(--font-mono);
-  font-size: 22px;
-  font-weight: 500;
-  fill: var(--ink);
-}
-.arc-sub {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  fill: var(--muted);
+.chart-solstices {
+  display: flex;
+  gap: 6px;
 }
 
 /* ---------- Shadow settings ---------- */
@@ -1190,18 +1290,9 @@ input.sun-date {
   color: var(--muted);
 }
 .shadow-status-error {
-  color: #9a3b1f;
+  color: var(--warn);
 }
 
-/* Not enough width for readout and arc side by side: lift the arc above the readout. */
-@media (max-width: 1100px) {
-  .sun-arc {
-    left: 24px;
-    bottom: 104px;
-    transform: none;
-    width: 360px;
-  }
-}
 
 /* ---------- Tutorial overlay ---------- */
 .tutorial {
@@ -1315,8 +1406,8 @@ input.sun-date {
 @media (max-width: 760px) {
   .app {
     --gutter: 16px;
-    /* The arc scales with the screen width (viewBox 440 x 124) plus its padding. */
-    --arc-h: calc((100vw - 32px) * 124 / 440 + 8px);
+    /* The chart scales with the screen width (viewBox 512 x 122) plus its header and padding. */
+    --chart-h: calc((100vw - 32px - 20px) * 122 / 512 + 40px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
   }
   .narrow-only {
@@ -1339,7 +1430,7 @@ input.sun-date {
     right: var(--gutter);
     top: calc(68px + env(safe-area-inset-top, 0px));
     width: auto;
-    max-height: calc(100dvh - 68px - var(--arc-h) - 48px);
+    max-height: calc(100dvh - 68px - var(--chart-h) - 48px);
     overflow-y: auto;
     padding: 8px 8px 8px 14px;
   }
@@ -1360,17 +1451,18 @@ input.sun-date {
     flex-wrap: wrap;
     padding-right: 6px;
   }
-  .sun-arc {
+  .sun-chart {
     left: var(--gutter);
     right: var(--gutter);
     bottom: calc(12px + var(--safe-bottom));
     width: auto;
     transform: none;
+    padding: 8px 10px 6px;
   }
   .map-buttons {
     right: var(--gutter);
     top: auto;
-    bottom: calc(var(--arc-h) + 28px + var(--safe-bottom));
+    bottom: calc(var(--chart-h) + 28px + var(--safe-bottom));
     transform: none;
   }
   .readout-floating {
@@ -1380,7 +1472,7 @@ input.sun-date {
   .maplibregl-ctrl-bottom-right {
     right: auto;
     left: 6px;
-    bottom: calc(var(--arc-h) + 20px + var(--safe-bottom));
+    bottom: calc(var(--chart-h) + 20px + var(--safe-bottom));
   }
   /* Layer panel becomes a bottom sheet. */
   .layer-panel {
@@ -1393,7 +1485,7 @@ input.sun-date {
     padding: 20px var(--gutter) calc(16px + var(--safe-bottom));
     border-radius: 20px 20px 0 0;
     border-bottom: 0;
-    box-shadow: 0 -8px 24px rgba(31, 29, 26, 0.18);
+    box-shadow: 0 -8px 24px rgba(8, 12, 18, 0.4);
     z-index: 5;
     animation: sheet-up 180ms ease-out;
   }
@@ -1462,13 +1554,16 @@ input.sun-date {
     max-height: calc(100dvh - 16px);
     z-index: 3;
   }
-  .sun-arc {
+  .sun-chart {
     left: 50%;
     right: auto;
     bottom: calc(6px + env(safe-area-inset-bottom, 0px));
-    width: min(300px, 38vw);
+    width: min(320px, 40vw);
     transform: translateX(-50%);
-    padding-top: 2px;
+    padding: 6px 8px 4px;
+  }
+  .sun-chart .chart-head {
+    margin-bottom: 2px;
   }
   .map-buttons {
     right: calc(var(--gutter) + var(--safe-right));
@@ -1492,7 +1587,7 @@ input.sun-date {
     border-radius: 0 20px 20px 0;
     border: 1px solid var(--hairline);
     border-left: 0;
-    box-shadow: 8px 0 24px rgba(31, 29, 26, 0.18);
+    box-shadow: 8px 0 24px rgba(8, 12, 18, 0.4);
     z-index: 5;
     animation: sheet-in 180ms ease-out;
   }
@@ -1565,7 +1660,7 @@ input.sun-date {
   .draw-bar,
   .layer-notice {
     left: 50%;
-    bottom: calc(var(--arc-h) + 24px + var(--safe-bottom));
+    bottom: calc(var(--chart-h) + 24px + var(--safe-bottom));
     transform: translateX(-50%);
     max-width: calc(100% - 32px);
   }
@@ -1589,7 +1684,7 @@ input.sun-date {
   }
   .app:has(.weather-warning) .sun-card {
     top: calc(112px + env(safe-area-inset-top, 0px));
-    max-height: calc(100dvh - 112px - var(--arc-h) - 48px);
+    max-height: calc(100dvh - 112px - var(--chart-h) - 48px);
   }
 }
 @media (max-height: 500px) and (orientation: landscape) {
@@ -1612,4 +1707,536 @@ input.sun-date {
   top: 0;
   left: 0;
   pointer-events: none;
+}
+
+/* ======================================================================
+   Frost HUD: desktop layout and the new panels.
+   ====================================================================== */
+:root {
+  color-scheme: dark;
+}
+.icon-button {
+  -webkit-backdrop-filter: var(--glass);
+  backdrop-filter: var(--glass);
+  border-width: 0.5px;
+  border-radius: 10px;
+  color: var(--ink);
+}
+.search-box {
+  -webkit-backdrop-filter: var(--glass);
+  backdrop-filter: var(--glass);
+  border-width: 0.5px;
+}
+.segmented button[aria-pressed='true'] {
+  background: rgba(255, 255, 255, 0.16);
+}
+.typed:focus {
+  background: var(--surface-solid);
+}
+.drop-card {
+  background: var(--surface-solid);
+}
+.pin-head {
+  background: #2a3038;
+  border-color: #f4f6f8;
+}
+.pin-label {
+  -webkit-backdrop-filter: var(--glass);
+  backdrop-filter: var(--glass);
+  border-width: 0.5px;
+}
+.place-dot {
+  background: #2a3038;
+  border-color: #f4f6f8;
+}
+.place-name {
+  color: var(--ink);
+}
+.maplibregl-popup-content {
+  background: var(--surface-solid);
+  color: var(--ink);
+}
+.maplibregl-popup-close-button {
+  color: var(--ink-2);
+}
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: var(--surface-solid);
+}
+.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+  border-bottom-color: var(--surface-solid);
+}
+.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: var(--surface-solid);
+}
+.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: var(--surface-solid);
+}
+.title {
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Top bar ---------- */
+.top-bar {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  top: 16px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px 0 16px;
+  z-index: 2;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-right: 14px;
+}
+.brand-name {
+  font-family: var(--font-hud);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+}
+.top-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0 14px;
+  border-left: 1px solid var(--hairline-soft);
+  min-width: 0;
+}
+.top-place .hud-value {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 17px;
+}
+.top-stats {
+  display: flex;
+  min-width: 0;
+}
+.top-when {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  padding-left: 14px;
+  border-left: 1px solid var(--hairline-soft);
+}
+.top-date {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+input.top-date-input {
+  width: calc(11ch + 10px);
+  text-align: right;
+  font-size: 17px;
+}
+input.top-time {
+  width: calc(5ch + 12px);
+  font-family: var(--font-hud);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 1379px) {
+  .top-cell[data-priority='3'] {
+    display: none;
+  }
+}
+@media (max-width: 1199px) {
+  .top-cell[data-priority='2'] {
+    display: none;
+  }
+}
+@media (max-width: 979px) {
+  .top-place {
+    display: none;
+  }
+}
+
+/* ---------- Forecast strip (top centre) ---------- */
+.forecast {
+  position: absolute;
+  top: 92px;
+  left: max(330px, calc(50% - 390px));
+  right: max(340px, calc(50% - 390px));
+  padding: 10px 12px;
+}
+.forecast-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 2px 8px;
+}
+.forecast-credit {
+  text-decoration: none;
+  letter-spacing: 0.1em;
+}
+.forecast-days {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+  grid-template-rows: auto;
+  grid-auto-rows: 0;
+  row-gap: 0;
+  column-gap: 4px;
+  overflow: hidden;
+}
+.forecast-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink-2);
+}
+.forecast-day:hover {
+  background: var(--surface-sunk);
+}
+.forecast-day[data-note] {
+  background: rgba(255, 122, 69, 0.09);
+}
+.forecast-day[aria-pressed='true'] {
+  background: rgba(245, 166, 35, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(245, 166, 35, 0.6);
+}
+.forecast-day[aria-pressed='true'] .hud-label {
+  color: var(--gold);
+}
+.forecast-day .hud-value {
+  font-size: 17px;
+}
+.light-bar {
+  display: block;
+  width: 64%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.light-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.light-bar > span[data-poor] {
+  background: #8a96a3;
+}
+.forecast-note {
+  height: 9px;
+  font-family: var(--font-hud);
+  font-size: 8.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  color: var(--warn);
+  white-space: nowrap;
+}
+.forecast-empty {
+  margin: 4px 2px 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+/* Inside the phone sun card: no panel of its own, days scroll sideways. */
+.forecast-compact {
+  position: static;
+  margin: 8px 0 4px;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.forecast-compact .forecast-days {
+  display: flex;
+  overflow-x: auto;
+  gap: 4px;
+  scrollbar-width: none;
+}
+.forecast-compact .forecast-day {
+  flex: 0 0 62px;
+}
+
+/* ---------- Alerts (right) ---------- */
+.alerts {
+  position: absolute;
+  top: 92px;
+  right: 20px;
+  width: 300px;
+  max-height: calc(100% - 92px - 330px);
+  overflow-y: auto;
+  padding: 12px 12px 6px;
+}
+.alerts-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 2px 6px;
+}
+.alerts-badge {
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: rgba(255, 154, 107, 0.18);
+  color: var(--warn);
+  font-family: var(--font-hud);
+  font-size: 11px;
+  font-weight: 700;
+}
+.alert {
+  display: flex;
+  gap: 10px;
+  padding: 10px 2px;
+  border-top: 1px solid var(--hairline-soft);
+}
+.alert-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink-2);
+}
+.alert-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-grow: 1;
+  min-width: 0;
+}
+.alert-text {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--ink);
+}
+.alert[data-tone='gold'] .alert-icon {
+  background: rgba(245, 166, 35, 0.16);
+  color: var(--gold);
+}
+.alert[data-tone='gold'] .alert-title {
+  color: var(--gold);
+}
+.alert[data-tone='blue'] .alert-icon {
+  background: rgba(110, 160, 255, 0.16);
+  color: var(--blue);
+}
+.alert[data-tone='blue'] .alert-title {
+  color: var(--blue);
+}
+.alert[data-tone='warn'] .alert-icon {
+  background: rgba(255, 122, 69, 0.18);
+  color: var(--warn);
+}
+.alert[data-tone='warn'] .alert-title {
+  color: var(--warn);
+}
+.alert-close {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.alerts-credit {
+  display: block;
+  padding: 8px 2px 4px;
+  font-size: 9px;
+  text-decoration: none;
+}
+
+/* ---------- Tool dock (bottom right) ---------- */
+.tool-dock {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+}
+.tool {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 8px;
+  border: 1px solid var(--hairline);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+}
+.tool:hover {
+  background: var(--surface-sunk);
+}
+.tool[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: rgba(245, 166, 35, 0.16);
+}
+.tool[data-tone='route'] svg {
+  color: #5b8def;
+}
+.tool .hud-label {
+  font-size: 9.5px;
+  color: var(--ink-2);
+}
+
+/* ---------- Wide layout positions ---------- */
+.app[data-layout='wide'] .layer-panel {
+  top: 92px;
+  left: 20px;
+  width: 290px;
+  max-height: calc(100% - 92px - 96px);
+  padding: 14px;
+}
+.app[data-layout='wide'] .layer-panel .eyebrow {
+  margin-top: 14px;
+}
+.layer-panel .search {
+  position: relative;
+  left: auto;
+  top: auto;
+  width: auto;
+  margin: 0 0 4px;
+  z-index: 3;
+}
+.layer-panel .search-box {
+  height: 40px;
+  border-radius: 10px;
+  background: var(--surface-sunk);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.layer-panel .search-results {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 6px;
+  background: var(--surface-solid);
+}
+.app[data-layout='wide'] .readout-floating {
+  left: 20px;
+  bottom: 20px;
+}
+.app[data-layout='wide'] .map-buttons {
+  right: 20px;
+  top: auto;
+  bottom: 116px;
+  transform: none;
+}
+/* The chart sits beside the tool dock, clear of the camera readout on the left. */
+.app[data-layout='wide'] .sun-chart {
+  left: auto;
+  right: 257px;
+  transform: none;
+}
+.app[data-layout='wide'] .draw-bar,
+.app[data-layout='wide'] .layer-notice {
+  left: auto;
+  right: 257px;
+  bottom: 262px;
+  transform: none;
+  max-width: 540px;
+}
+.app[data-layout='wide'] .map-buttons {
+  bottom: 140px;
+}
+/* Map credits run along the bottom edge, in the gutter under the panels. */
+.app[data-layout='wide'] .maplibregl-ctrl-bottom-right .maplibregl-ctrl {
+  margin: 0 4px 0 0;
+}
+/* Under 1400 px the camera readout lives in the layer panel, and the chart fills the gap
+   between the panel and the dock. */
+@media (max-width: 1399px) {
+  .app[data-layout='wide'] .sun-chart {
+    left: 330px;
+    right: auto;
+    bottom: 20px;
+    width: min(540px, calc(100% - 330px - 257px));
+  }
+  .app[data-layout='wide'] .layer-panel {
+    max-height: calc(100% - 92px - 20px);
+  }
+  .app[data-layout='wide'] .draw-bar,
+  .app[data-layout='wide'] .layer-notice {
+    left: 330px;
+    right: auto;
+    bottom: 262px;
+  }
+}
+
+/* MapLibre's credits, in the HUD's colours. */
+.maplibregl-ctrl-attrib {
+  background: rgba(24, 29, 35, 0.6) !important;
+  color: var(--muted);
+}
+.maplibregl-ctrl-attrib a {
+  color: var(--ink-2);
+}
+.maplibregl-ctrl-attrib.maplibregl-compact {
+  background: rgba(24, 29, 35, 0.72) !important;
+}
+.maplibregl-ctrl-attrib-button {
+  filter: invert(1);
+}
+
+/* ---------- Lens overlay: vignette, edge blur, grain over everything ---------- */
+.lens-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+.lens-overlay > * {
+  position: absolute;
+  inset: 0;
+}
+.lens-vignette {
+  background: radial-gradient(ellipse at center, rgba(20, 24, 29, 0) 58%, rgba(20, 24, 29, calc(0.3 * var(--lens))) 100%);
+}
+/* Blur through the vignette's ellipse, feathered over 250 px to full at the corners. */
+.lens-edge {
+  -webkit-backdrop-filter: blur(calc(6px * var(--lens)));
+  backdrop-filter: blur(calc(6px * var(--lens)));
+  -webkit-mask-image: radial-gradient(ellipse at center, transparent calc(100% - 250px), black 100%);
+  mask-image: radial-gradient(ellipse at center, transparent calc(100% - 250px), black 100%);
+}
+.lens-grain {
+  mix-blend-mode: overlay;
+  opacity: calc(0.32 * var(--lens));
+}
+.lens-strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+.lens-strength .hud-label {
+  white-space: nowrap;
 }

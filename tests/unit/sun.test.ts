@@ -92,3 +92,16 @@ describe('timezones', () => {
     expect(t.dayEnd - t.dayStart).toBe(25 * 3600000);
   });
 });
+
+describe('golden and blue hour', () => {
+  it('Seceda, 26 Sep 2026', async () => {
+    const { lightWindows } = await import('../../src/sun/dayCache');
+    const w = lightWindows(Date.parse('2026-09-26T10:00:00Z'), 46.60068, 11.72598, 'Europe/Rome');
+    const hm = (ms: number) => new Date(ms).toISOString().slice(11, 16);
+    // Evening golden hour: sun from 6° down to the horizon; blue hour: 4° to 6° below.
+    expect(w.golden.evening!.map(hm)).toEqual(['16:23', '17:03']); // 18:23 to 19:03 local
+    expect(w.blue.evening!.map(hm)).toEqual(['17:21', '17:33']); // 19:21 to 19:33 local
+    expect(w.golden.morning![0]).toBeLessThan(w.golden.morning![1]);
+    expect(w.blue.morning![1]).toBeLessThan(w.golden.morning![0]);
+  });
+});
