@@ -14,6 +14,8 @@ import { setMap } from './mapInstance';
 import { installShadowLayer } from './shadowLayer';
 import { installGoogle3d } from './google3d';
 import { installSteadyCamera } from './steadyCamera';
+
+const STEADY_CAMERA = false;
 import { installSunScene } from '../scene/sunScene';
 import { installLightColour } from '../scene/lightColour';
 import { installUserLayers } from '../layers/userLayers';
@@ -164,7 +166,8 @@ export function MapView() {
     let removeGoogle = () => {};
     let removeSteady = () => {};
     map.once('load', () => {
-      removeSteady = installSteadyCamera(map);
+      // Steady camera: off until it works with MapLibre's drag and scroll gestures.
+      if (STEADY_CAMERA) removeSteady = installSteadyCamera(map);
       removeShadows = installShadowLayer(map, 'contour-minor');
       // Under the labels so they keep their colour.
       removeLight = installLightColour(map, 'contour-label');
