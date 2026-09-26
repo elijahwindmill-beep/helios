@@ -15,13 +15,25 @@ import { Alerts } from './ui/Alerts';
 import { ToolDock } from './ui/ToolDock';
 import { useNarrow, useReadoutInPanel } from './ui/useMedia';
 import { LensOverlay } from './ui/LensOverlay';
+import { ClearViewButton, HudTabs } from './ui/HudTabs';
+import { useApp } from './store/app';
 
 export function App() {
   // Desktop: a HUD around the map (top bar, forecast, alerts, dock). Phone: compact cards.
   const narrow = useNarrow();
   const readoutInPanel = useReadoutInPanel();
+  const hud = useApp((s) => s.hud);
+  const lens = useApp((s) => (s.overlays.lens ? s.lensStrength : 0));
   return (
-    <div className="app" data-layout={narrow ? 'compact' : 'wide'}>
+    <div
+      className="app"
+      data-layout={narrow ? 'compact' : 'wide'}
+      data-hide-left={!hud.left || undefined}
+      data-hide-right={!hud.right || undefined}
+      data-hide-top={!hud.top || undefined}
+      data-hide-bottom={!hud.bottom || undefined}
+      style={{ '--lens': lens } as React.CSSProperties}
+    >
       <MapView />
       {narrow ? (
         <>
@@ -42,6 +54,7 @@ export function App() {
       <MapButtons />
       {!readoutInPanel && <CameraReadout />}
       <LensOverlay />
+      {narrow ? <ClearViewButton /> : <HudTabs />}
       <DrawBar />
       <LayerNotice />
       <PhotoViewer />

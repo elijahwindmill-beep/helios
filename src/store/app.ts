@@ -14,6 +14,13 @@ export interface Pin {
 
 export type ShadowQuality = 'low' | 'medium' | 'high';
 
+export interface Hud {
+  left: boolean;
+  right: boolean;
+  top: boolean;
+  bottom: boolean;
+}
+
 interface AppState {
   base: BaseLayer;
   overlays: Overlays;
@@ -29,6 +36,8 @@ interface AppState {
   shadowQuality: ShadowQuality;
   /** 0–1, how strong the lens look is when it's on. */
   lensStrength: number;
+  /** Which groups of controls are shown; hiding them all gives a clear map. Not saved. */
+  hud: Hud;
   /** Loading state of the shadow layer, for the UI. */
   shadowStatus: { state: 'idle' | 'loading' | 'error'; message?: string; renderMs?: number };
   /** Phone layout: the layer panel is a bottom sheet that opens on demand. */
@@ -47,6 +56,9 @@ interface AppState {
   setFullDay(on: boolean): void;
   setShadowQuality(q: ShadowQuality): void;
   setLensStrength(v: number): void;
+  setHud(patch: Partial<Hud>): void;
+  /** Hides every group, or shows them all again if they're all hidden. */
+  toggleHud(): void;
   setShadowStatus(s: AppState['shadowStatus']): void;
   setLayersOpen(open: boolean): void;
   openTutorial(): void;
@@ -82,6 +94,7 @@ export const useApp = create<AppState>()(
       fullDay: false,
       shadowQuality: 'medium',
       lensStrength: 1,
+      hud: { left: true, right: true, top: true, bottom: true },
       shadowStatus: { state: 'idle' },
       layersOpen: false,
       tutorialOpen: false,
@@ -97,6 +110,12 @@ export const useApp = create<AppState>()(
       setFullDay: (fullDay) => set({ fullDay }),
       setShadowQuality: (shadowQuality) => set({ shadowQuality }),
       setLensStrength: (lensStrength) => set({ lensStrength: Math.min(1, Math.max(0, lensStrength)) }),
+      setHud: (patch) => set((s) => ({ hud: { ...s.hud, ...patch } })),
+      toggleHud: () =>
+        set((s) => {
+          const anyShown = Object.values(s.hud).some(Boolean);
+          return { hud: { left: !anyShown, right: !anyShown, top: !anyShown, bottom: !anyShown } };
+        }),
       setShadowStatus: (shadowStatus) => set({ shadowStatus }),
       setLayersOpen: (layersOpen) => set({ layersOpen }),
       openTutorial: () => set({ tutorialOpen: true, layersOpen: false }),

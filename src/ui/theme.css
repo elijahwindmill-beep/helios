@@ -2213,6 +2213,9 @@ input.top-time {
   z-index: 30;
   pointer-events: none;
 }
+.app[data-layout='compact'][data-hide-bottom] .sun-chart {
+  translate: 0 calc(100% + 60px);
+}
 .lens-overlay > * {
   position: absolute;
   inset: 0;
@@ -2220,16 +2223,30 @@ input.top-time {
 .lens-vignette {
   background: radial-gradient(ellipse at center, rgba(20, 24, 29, 0) 58%, rgba(20, 24, 29, calc(0.3 * var(--lens))) 100%);
 }
-/* Blur through the vignette's ellipse, feathered over 250 px to full at the corners. */
+/* Blur feathering in from the screen edges (the vignette's shape, fitted to the sides), panels included. */
 .lens-edge {
-  -webkit-backdrop-filter: blur(calc(6px * var(--lens)));
-  backdrop-filter: blur(calc(6px * var(--lens)));
-  -webkit-mask-image: radial-gradient(ellipse at center, transparent calc(100% - 250px), black 100%);
-  mask-image: radial-gradient(ellipse at center, transparent calc(100% - 250px), black 100%);
+  -webkit-backdrop-filter: blur(calc(12px * var(--lens)));
+  backdrop-filter: blur(calc(12px * var(--lens)));
+  -webkit-mask-image: radial-gradient(ellipse closest-side at center, transparent calc(100% - 140px), black 100%);
+  mask-image: radial-gradient(ellipse closest-side at center, transparent calc(100% - 140px), black 100%);
+}
+/* Each control window's own tilt-shift: blur along its top and bottom edge. */
+.lens-overlay > .lens-band {
+  inset: auto;
+  -webkit-backdrop-filter: blur(calc(4px * var(--lens)));
+  backdrop-filter: blur(calc(4px * var(--lens)));
+}
+.lens-band[data-edge='top'] {
+  -webkit-mask-image: linear-gradient(to bottom, black, transparent);
+  mask-image: linear-gradient(to bottom, black, transparent);
+}
+.lens-band[data-edge='bottom'] {
+  -webkit-mask-image: linear-gradient(to top, black, transparent);
+  mask-image: linear-gradient(to top, black, transparent);
 }
 .lens-grain {
   mix-blend-mode: overlay;
-  opacity: calc(0.32 * var(--lens));
+  opacity: calc(0.26 * var(--lens));
 }
 .lens-strength {
   display: flex;
@@ -2271,4 +2288,124 @@ input.top-time {
 }
 .photo-info a {
   color: var(--ink-2);
+}
+
+/* ---------- Hiding the controls for a clear map ---------- */
+.top-bar,
+.forecast,
+.alerts,
+.layer-panel,
+.sun-chart,
+.tool-dock,
+.readout-floating,
+.map-buttons,
+.search,
+.sun-card,
+.weather-warning {
+  transition:
+    translate 280ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    opacity 220ms;
+}
+.app[data-hide-left] .layer-panel,
+.app[data-layout='compact'][data-hide-left] .search,
+.app[data-layout='compact'][data-hide-left] .sun-card,
+.app[data-layout='compact'][data-hide-left] .weather-warning {
+  translate: calc(-100% - 60px) 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.app[data-layout='wide'][data-hide-right] .alerts,
+.app[data-hide-right] .map-buttons {
+  translate: calc(100% + 60px) 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.app[data-hide-top] .top-bar,
+.app[data-hide-top] .forecast {
+  translate: 0 calc(-100% - 120px);
+  opacity: 0;
+  pointer-events: none;
+}
+.app[data-hide-bottom] .sun-chart,
+.app[data-hide-bottom] .tool-dock,
+.app[data-hide-bottom] .readout-floating {
+  translate: 0 calc(100% + 60px);
+  opacity: 0;
+  pointer-events: none;
+}
+.hud-tab {
+  position: absolute;
+  /* Above the lens overlay, so the edge blur doesn't smear them. */
+  z-index: 31;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0.5px solid var(--hairline);
+  background: var(--surface);
+  -webkit-backdrop-filter: var(--glass);
+  backdrop-filter: var(--glass);
+  color: var(--ink-2);
+  opacity: 0.7;
+  transition: opacity 150ms;
+}
+.hud-tab:hover,
+.hud-tab:focus-visible,
+.hud-tab[aria-pressed='true'] {
+  opacity: 1;
+}
+.hud-tab[data-side='left'],
+.hud-tab[data-side='right'] {
+  top: 50%;
+  width: 16px;
+  height: 56px;
+  margin-top: -28px;
+}
+.hud-tab[data-side='left'] {
+  left: 2px;
+  border-radius: 0 8px 8px 0;
+}
+.hud-tab[data-side='right'] {
+  right: 2px;
+  border-radius: 8px 0 0 8px;
+}
+.hud-tab[data-side='top'],
+.hud-tab[data-side='bottom'] {
+  left: 50%;
+  width: 56px;
+  height: 14px;
+  margin-left: -28px;
+}
+.hud-tab[data-side='top'] {
+  top: 1px;
+  border-radius: 0 0 8px 8px;
+}
+.hud-tab[data-side='bottom'] {
+  bottom: 1px;
+  border-radius: 8px 8px 0 0;
+}
+/* Phone: the clear-view button sits with the map buttons; once everything is hidden it stays alone. */
+.clear-view {
+  position: absolute;
+  z-index: 31;
+  right: var(--gutter, 16px);
+  bottom: calc(var(--chart-h, 120px) + 28px + var(--safe-bottom, 0px) + 3 * 52px);
+}
+.clear-view-restore {
+  bottom: calc(16px + var(--safe-bottom, 0px));
+}
+@media (prefers-reduced-motion: reduce) {
+  .top-bar,
+  .forecast,
+  .alerts,
+  .layer-panel,
+  .sun-chart,
+  .tool-dock,
+  .readout-floating,
+  .map-buttons,
+  .search,
+  .sun-card,
+  .weather-warning {
+    transition: none;
+  }
 }
