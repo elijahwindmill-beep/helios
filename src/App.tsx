@@ -16,6 +16,10 @@ import { ToolDock } from './ui/ToolDock';
 import { useNarrow, useReadoutInPanel } from './ui/useMedia';
 import { LensOverlay } from './ui/LensOverlay';
 import { ClearViewButton, HudTabs } from './ui/HudTabs';
+import { Timeline } from './ui/Timeline';
+import { Inspector } from './ui/Inspector';
+import { ExportDialog } from './ui/ExportDialog';
+import { useTimeline } from './store/timeline';
 import { useApp } from './store/app';
 
 export function App() {
@@ -24,6 +28,8 @@ export function App() {
   const readoutInPanel = useReadoutInPanel();
   const hud = useApp((s) => s.hud);
   const lens = useApp((s) => (s.overlays.lens ? s.lensStrength : 0));
+  const timeline = useTimeline((s) => s.open);
+  const inspecting = useTimeline((s) => s.open && s.selected !== null);
   return (
     <div
       className="app"
@@ -32,6 +38,8 @@ export function App() {
       data-hide-right={!hud.right || undefined}
       data-hide-top={!hud.top || undefined}
       data-hide-bottom={!hud.bottom || undefined}
+      data-timeline={timeline || undefined}
+      data-inspector={inspecting || undefined}
       style={{ '--lens': lens } as React.CSSProperties}
     >
       <MapView />
@@ -53,6 +61,8 @@ export function App() {
       <SunChart withControls={!narrow} />
       <MapButtons />
       {!readoutInPanel && <CameraReadout />}
+      <Timeline />
+      <Inspector />
       <LensOverlay />
       {narrow ? <ClearViewButton /> : <HudTabs />}
       <DrawBar />
@@ -60,6 +70,7 @@ export function App() {
       <PhotoViewer />
       <SpotViewer />
       <DropZone />
+      <ExportDialog />
       <AboutDialog />
       <Tutorial />
     </div>

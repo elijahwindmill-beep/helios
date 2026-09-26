@@ -33,6 +33,10 @@ const SKY_FILL: [number, number, number] = [0.12, 0.26, 0.62];
  * Terrain shadows: loads elevation for the view plus a margin, ray-marches it toward the
  * sun on the GPU, and drapes the result on the 3D terrain as a canvas raster layer.
  */
+// For the video export: true while the shadows are still catching up with the view or time.
+let busy = () => false;
+export const shadowsBusy = () => busy();
+
 export function installShadowLayer(map: MlMap, beforeLayer: string): () => void {
   let renderer: ShadowRenderer;
   try {
@@ -45,6 +49,7 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
   let loading: { range: TileRange; abort: AbortController } | null = null;
   let frame = 0;
   let pendingPause: () => void = () => {};
+  let pausing = false;
 
   const corners = (r: TileRange): [[number, number], [number, number], [number, number], [number, number]] => {
     const b = rangeBounds(r);
@@ -79,11 +84,13 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
       // Re-upload the canvas, then stop re-uploading every frame. The 3D terrain drapes
       // raster layers from a cache that only refreshes a frame later, so play for two.
       source.play();
+      pausing = true;
       let frames = 0;
       const onRender = () => {
         if (++frames < 2) return map.triggerRepaint();
         map.off('render', onRender);
         source.pause();
+        pausing = false;
       };
       map.off('render', pendingPause);
       pendingPause = onRender;
@@ -164,8 +171,12 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
   let moveTimer = 0;
   const onMoveEnd = () => {
     clearTimeout(moveTimer);
-    moveTimer = window.setTimeout(refreshMosaic, 250);
+    moveTimer = window.setTimeout(() => {
+      moveTimer = 0;
+      void refreshMosaic();
+    }, 250);
   };
+  busy = () => useApp.getState().overlays.shadows && (moveTimer !== 0 || loading !== null || frame !== 0 || pausing);
   map.on('moveend', onMoveEnd);
 
   const unsubscribe = useApp.subscribe((now, prev) => {

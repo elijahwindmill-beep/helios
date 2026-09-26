@@ -14,7 +14,7 @@ Default location: Seceda ridgeline, Val Gardena (46.60068, 11.72598).
 | 2 | Sun position, cast terrain shadows, time and date sliders, sun scrubber | Done |
 | 3 | Compass ring, sun paths, solstice paths, draggable sun | Done |
 | 4 | Routes (GPX/KML/GeoJSON), places, geotagged photos | Done |
-| 5 | Keyframes, clips, timeline, playback, video export | Next |
+| 5 | Keyframes, clips, timeline, playback, video export | Built, being polished |
 | 6 | Alpenglow dark theme, sun-hours heatmap, South Tyrol LiDAR, extras | |
 
 The full build brief is in [PROMPT.md](PROMPT.md).
@@ -100,6 +100,13 @@ In the layer panel under **Your layers** (on a phone: the Layers button), or fro
 - **Places:** pins with a name and notes. **Place at pin** saves the sun pin's spot; the **+** next to a search result saves that result. Click a place on the map for its notes and **Move sun pin here**. Drag it to move it.
 - **Photos:** placed from the GPS in the photo. A photo without GPS starts at the sun pin; drag it into place. Click a photo to see it full size with when it was taken. **Sun when this was taken** moves the pin and the time to that photo, so you can compare the light. HEIC photos show full size in Safari; other browsers show them as a camera icon.
 - Routes, Places and Photos each have an on/off switch. Everything is kept in this browser (photos in its file storage, not uploaded anywhere).
+
+### Timeline and video (phase 5)
+
+- **Timeline** (tool dock, or the diamond button on a phone): set the view and sun, press **◇ Add keyframe** (K), move the playhead, change the view and sun, add another. Space plays, arrows step (Shift: tenths), Delete removes the selected keyframe. Drag diamonds to move them (snaps to seconds; Alt for tenths).
+- **Inspector** (right, when a keyframe is selected): sun time and date, **Continuous** (glide the exact moment: day sweeps, year lapses) or **Day lapse** (the date steps day by day, the time holds or sweeps N times), camera numbers, easing (Linear, Ease, Hold), layer switches, Set from view, Delete.
+- Several clips per project; **Split clip** cuts at the playhead. Everything autosaves in the browser; **Save project** / **Open…** use a .json file.
+- **Export video**: MP4 (H.264), 720p / 1080p / 4K, 24 / 30 / 60 fps. Frames are rendered one at a time, each waiting for the map and shadows, so the video is smooth on any computer (it takes longer than the clip). Uses the browser's WebCodecs encoder with Mediabunny (MPL-2.0) instead of the brief's WebM MediaRecorder, because it gives exact frame timing and a file Resolve opens directly. Pins and photo markers aren't in the video.
 
 ### Photo spots
 

@@ -2409,3 +2409,498 @@ input.top-time {
     transition: none;
   }
 }
+
+/* ======================================================================
+   Timeline, keyframe inspector, export (phase 5)
+   ====================================================================== */
+.timeline {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 20px;
+  padding: 8px 12px 10px;
+  z-index: 3;
+}
+.timeline::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  pointer-events: none;
+  --b: linear-gradient(var(--bracket), var(--bracket));
+  background:
+    var(--b) left top / 10px 1px no-repeat,
+    var(--b) left top / 1px 10px no-repeat,
+    var(--b) right top / 10px 1px no-repeat,
+    var(--b) right top / 1px 10px no-repeat,
+    var(--b) left bottom / 10px 1px no-repeat,
+    var(--b) left bottom / 1px 10px no-repeat,
+    var(--b) right bottom / 10px 1px no-repeat,
+    var(--b) right bottom / 1px 10px no-repeat;
+}
+.tl-transport {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--hairline-soft);
+}
+.tl-clip-name {
+  width: 150px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--surface-sunk);
+  font-family: var(--font-hud);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.tl-clip-name:focus {
+  outline: 0;
+  border-color: var(--accent);
+}
+.tl-button {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+}
+.tl-button:hover {
+  background: var(--surface-sunk);
+}
+.tl-button:disabled,
+.chip:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.tl-button[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: rgba(245, 166, 35, 0.16);
+}
+.tl-play {
+  width: 40px;
+  border-color: #ff6b4a;
+  color: #ffb4a3;
+}
+.tl-timecode {
+  min-width: 110px;
+  padding: 0 6px;
+  font-size: 18px;
+}
+.tl-sep {
+  width: 1px;
+  height: 24px;
+  background: var(--hairline-soft);
+  margin: 0 4px;
+}
+.tl-spacer {
+  flex-grow: 1;
+}
+.tl-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-left: 4px;
+}
+.tl-check input {
+  accent-color: var(--accent);
+}
+.tl-body {
+  display: flex;
+  gap: 8px;
+  padding-top: 6px;
+}
+.tl-labels {
+  display: grid;
+  grid-template-rows: 18px 30px 30px 26px 22px;
+  align-items: center;
+  width: 74px;
+  flex-shrink: 0;
+}
+.tl-tracks {
+  position: relative;
+  flex-grow: 1;
+  display: grid;
+  grid-template-rows: 18px 30px 30px 26px 22px;
+  cursor: ew-resize;
+  touch-action: none;
+  min-width: 0;
+}
+.tl-ruler {
+  position: relative;
+  border-bottom: 1px solid var(--hairline-soft);
+}
+.tl-tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-family: var(--font-hud);
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.tl-tick::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 13px;
+  width: 1px;
+  height: 5px;
+  background: var(--hairline);
+}
+.tl-row {
+  position: relative;
+  border-bottom: 1px solid var(--hairline-soft);
+}
+.tl-clips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  cursor: default;
+}
+.tl-clip {
+  height: 22px;
+  padding: 0 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  background: rgba(91, 141, 239, 0.12);
+  color: var(--ink-2);
+  font-family: var(--font-hud);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.tl-clip[aria-pressed='true'] {
+  background: rgba(91, 141, 239, 0.3);
+  border-color: #5b8def;
+  color: var(--ink);
+}
+.tl-clip-add {
+  background: transparent;
+}
+.tl-segment {
+  position: absolute;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--accent);
+  opacity: 0.55;
+}
+.tl-segment[data-mode='daylapse'] {
+  background: repeating-linear-gradient(90deg, var(--accent) 0 5px, transparent 5px 9px);
+  opacity: 0.8;
+}
+.tl-segment[data-easing='hold'] {
+  background: var(--muted);
+}
+.tl-key {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  padding: 0;
+  border: 1.5px solid #f4f6f8;
+  background: var(--accent);
+  transform: rotate(45deg);
+  cursor: grab;
+  z-index: 1;
+}
+.tl-key[aria-pressed='true'] {
+  background: #ff6b4a;
+  box-shadow: 0 0 0 3px rgba(255, 107, 74, 0.35);
+}
+.tl-key-cam {
+  background: #5b8def;
+}
+.tl-key-layers {
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  background: #9fb4c6;
+}
+.tl-key-label {
+  position: absolute;
+  left: 12px;
+  top: -14px;
+  transform: rotate(-45deg);
+  transform-origin: left top;
+  font-family: var(--font-hud);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gold);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.tl-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #ff6b4a;
+  box-shadow: 0 0 8px rgba(255, 107, 74, 0.6);
+  pointer-events: none;
+  z-index: 2;
+}
+.tl-playhead::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -5px;
+  border: 6px solid transparent;
+  border-top: 7px solid #ff6b4a;
+}
+.tl-empty {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 46px;
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  pointer-events: none;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* While the timeline is open it takes the bottom of the screen. */
+.app[data-timeline] .sun-chart,
+.app[data-timeline] .tool-dock,
+.app[data-timeline] .readout-floating,
+.app[data-timeline] .draw-bar {
+  display: none;
+}
+.app[data-layout='wide'][data-timeline] .layer-panel {
+  max-height: calc(100% - 92px - var(--tl-h, 230px) - 36px);
+}
+.app[data-layout='wide'][data-timeline] .map-buttons {
+  bottom: calc(var(--tl-h, 230px) + 36px);
+}
+.app[data-inspector] .alerts {
+  display: none;
+}
+.app[data-hide-bottom] .timeline {
+  translate: 0 calc(100% + 60px);
+  opacity: 0;
+  pointer-events: none;
+}
+.app[data-hide-right] .inspector {
+  translate: calc(100% + 60px) 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.timeline,
+.inspector {
+  transition:
+    translate 280ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    opacity 220ms;
+}
+
+/* ---------- Keyframe inspector (right) ---------- */
+.inspector {
+  position: absolute;
+  top: 92px;
+  right: 20px;
+  width: 300px;
+  max-height: calc(100% - 92px - var(--tl-h, 230px) - 36px);
+  overflow-y: auto;
+  padding: 12px 14px;
+  z-index: 3;
+}
+.insp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+input.insp-at {
+  width: calc(6ch + 10px);
+  text-align: right;
+  font-size: 18px;
+}
+.insp-section {
+  margin: 14px 0 8px;
+}
+.insp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  margin-bottom: 8px;
+}
+.insp-grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+.insp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.insp-inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+.insp-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+.inspector .typed.insp-input,
+.inspector input.insp-input {
+  width: 100%;
+  margin: 0;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--hairline);
+  border-radius: 7px;
+  background: var(--surface-sunk);
+  font-size: 15px;
+}
+.inspector .insp-inline input.insp-input {
+  width: 70px;
+}
+.inspector .segmented {
+  margin: 4px 0 0;
+}
+.insp-layers {
+  margin-top: 12px;
+  border-bottom: 1px solid var(--hairline-soft);
+}
+.insp-layers input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--track-on);
+}
+.insp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.insp-delete {
+  margin-left: auto;
+  color: var(--warn);
+}
+
+/* ---------- Export ---------- */
+.export-dialog {
+  width: min(460px, calc(100% - 32px));
+  padding: 20px 22px;
+  color: var(--ink);
+}
+.export-dialog::backdrop {
+  background: rgba(8, 12, 18, 0.5);
+}
+.export-dialog p {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.export-dialog .hud-label {
+  display: block;
+  margin: 12px 0 6px;
+}
+.export-note {
+  margin-top: 14px;
+}
+.export-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+.export-actions a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.export-progress {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  width: min(560px, calc(100% - 32px));
+}
+.export-bar {
+  flex-grow: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.export-bar > span {
+  display: block;
+  height: 100%;
+  background: #ff6b4a;
+}
+/* While exporting, only the map (in a 16:9 box) and the progress card show. */
+html[data-exporting] body {
+  background: #0d1014;
+}
+html[data-exporting] .app > :not(.map):not(.export-progress),
+html[data-exporting] .maplibregl-marker,
+html[data-exporting] .maplibregl-ctrl-bottom-right {
+  display: none !important;
+}
+
+/* ---------- Phone: timeline across the bottom, inspector above it ---------- */
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) {
+  .timeline {
+    left: var(--gutter, 12px);
+    right: var(--gutter, 12px);
+    bottom: calc(8px + var(--safe-bottom, 0px));
+    padding: 6px 8px 8px;
+  }
+  .tl-clip-name {
+    width: 110px;
+  }
+  .tl-timecode {
+    min-width: 0;
+    font-size: 15px;
+  }
+  .tl-check,
+  .tl-sep {
+    display: none;
+  }
+  .tl-labels {
+    width: 54px;
+  }
+  .app[data-layout='compact'][data-timeline] .sun-card,
+  .app[data-layout='compact'][data-timeline] .weather-warning {
+    display: none;
+  }
+  .inspector {
+    top: auto;
+    left: var(--gutter, 12px);
+    right: var(--gutter, 12px);
+    bottom: calc(var(--tl-h, 300px) + 16px + var(--safe-bottom, 0px));
+    width: auto;
+    max-height: calc(100dvh - var(--tl-h, 300px) - 90px);
+  }
+  .app[data-layout='compact'][data-timeline] .map-buttons,
+  .app[data-layout='compact'][data-timeline] .clear-view {
+    display: none;
+  }
+}

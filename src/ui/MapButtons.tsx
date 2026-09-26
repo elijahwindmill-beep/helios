@@ -1,5 +1,6 @@
 import { useApp } from '../store/app';
 import { getMap } from '../map/mapInstance';
+import { useTimeline } from '../store/timeline';
 
 export function MapButtons() {
   const bearing = useApp((s) => s.camera?.bearing ?? 0);
@@ -13,6 +14,11 @@ export function MapButtons() {
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round" aria-hidden="true">
           <path d="M12 4l9 5-9 5-9-5z" />
           <path d="M3 14l9 5 9-5" />
+        </svg>
+      </button>
+      <button className="icon-button narrow-only" aria-label="Timeline" title="Keyframes, playback and video export" onClick={() => useTimeline.getState().setOpen(!useTimeline.getState().open)}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 3l5 6-5 6-5-6zM4 20h16" />
         </svg>
       </button>
       <button className="icon-button" aria-label="How to move around" title="How to move around" onClick={() => useApp.getState().openTutorial()}>

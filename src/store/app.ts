@@ -53,10 +53,14 @@ interface AppState {
   setCamera(camera: CameraState): void;
   setAboutOpen(open: boolean): void;
   setTime(ms: number): void;
+  /** Exact moment, not rounded to the minute: timeline playback and export. */
+  setTimeExact(ms: number): void;
   setFullDay(on: boolean): void;
   setShadowQuality(q: ShadowQuality): void;
   setLensStrength(v: number): void;
   setHud(patch: Partial<Hud>): void;
+  /** Sets several layer switches at once (timeline keyframes). */
+  setOverlays(patch: Partial<Overlays>): void;
   /** Hides every group, or shows them all again if they're all hidden. */
   toggleHud(): void;
   setShadowStatus(s: AppState['shadowStatus']): void;
@@ -107,10 +111,13 @@ export const useApp = create<AppState>()(
       setCamera: (camera) => set({ camera }),
       setAboutOpen: (aboutOpen) => set({ aboutOpen }),
       setTime: (time) => set({ time: Math.round(time / 60000) * 60000 }),
+      setTimeExact: (time) => set({ time }),
       setFullDay: (fullDay) => set({ fullDay }),
       setShadowQuality: (shadowQuality) => set({ shadowQuality }),
       setLensStrength: (lensStrength) => set({ lensStrength: Math.min(1, Math.max(0, lensStrength)) }),
       setHud: (patch) => set((s) => ({ hud: { ...s.hud, ...patch } })),
+      setOverlays: (patch) =>
+        set((s) => (Object.entries(patch).every(([k, v]) => s.overlays[k as keyof Overlays] === v) ? {} : { overlays: { ...s.overlays, ...patch } })),
       toggleHud: () =>
         set((s) => {
           const anyShown = Object.values(s.hud).some(Boolean);

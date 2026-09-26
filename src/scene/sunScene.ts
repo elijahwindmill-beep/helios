@@ -85,7 +85,7 @@ export function installSunScene(map: MlMap): () => void {
   const resize = () => {
     const w = map.getCanvas().clientWidth;
     const h = map.getCanvas().clientHeight;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = map.getPixelRatio();
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
     canvas.style.width = `${w}px`;
@@ -126,7 +126,7 @@ export function installSunScene(map: MlMap): () => void {
   // ---- Drawing ----
 
   const draw = () => {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = map.getPixelRatio();
     const W = canvas.width / dpr;
     const H = canvas.height / dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
