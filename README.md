@@ -2,7 +2,7 @@
 
 Shadow casting map for scheduling and planning trips and photography. Scout sun and shadow on real 3D terrain, then (soon) turn it into keyframed clips for video.
 
-**Live app:** https://elijahwindmill-beep.github.io/helios/ (goes live after the first successful deploy, see [Deploying](#deploying))
+**Live app:** https://elijahwindmill-beep.github.io/helios/
 
 Default location: Seceda ridgeline, Val Gardena (46.60068, 11.72598).
 
@@ -18,6 +18,18 @@ Default location: Seceda ridgeline, Val Gardena (46.60068, 11.72598).
 | 6 | Alpenglow dark theme, sun-hours heatmap, South Tyrol LiDAR, extras | |
 
 The full build brief is in [PROMPT.md](PROMPT.md).
+
+## Queue
+
+Extra tasks, in the order they'll be built. Each runs after the phase it names.
+
+1. **Mobile layout and touch controls** (after phase 2, requested 26 Sep 2026)
+   - Layout fitted to portrait phone screens: map full screen, panels collapse into a bottom sheet, readout and attribution never overlap, all touch targets at least 44 px.
+   - Touch gestures, matching the mouse controls:
+     - 1 finger drag: pan. Double-tap: move the pin.
+     - 2 fingers: pinch to move the camera closer or further, twist to rotate.
+     - 3 fingers drag: orbit (up/down tilts, left/right rotates).
+   - Tutorial overlay on first visit that shows the 1, 2 and 3 finger gestures, with a cross (×) button to close it. Once closed it stays closed, and a "?" button brings it back.
 
 ## Using it
 
