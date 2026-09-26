@@ -29,6 +29,11 @@ interface AppState {
   shadowQuality: ShadowQuality;
   /** Loading state of the shadow layer, for the UI. */
   shadowStatus: { state: 'idle' | 'loading' | 'error'; message?: string; renderMs?: number };
+  /** Phone layout: the layer panel is a bottom sheet that opens on demand. */
+  layersOpen: boolean;
+  tutorialOpen: boolean;
+  /** Set once the tutorial has been closed, so it doesn't pop up again. */
+  tutorialSeen: boolean;
   setBase(base: BaseLayer): void;
   toggleOverlay(key: keyof Overlays): void;
   setImagery(id: ImageryId): void;
@@ -40,6 +45,9 @@ interface AppState {
   setFullDay(on: boolean): void;
   setShadowQuality(q: ShadowQuality): void;
   setShadowStatus(s: AppState['shadowStatus']): void;
+  setLayersOpen(open: boolean): void;
+  openTutorial(): void;
+  closeTutorial(): void;
 }
 
 const DEFAULT_OVERLAYS: Overlays = { shadows: true, contours: true, labels: true };
@@ -58,6 +66,9 @@ export const useApp = create<AppState>()(
       fullDay: false,
       shadowQuality: 'medium',
       shadowStatus: { state: 'idle' },
+      layersOpen: false,
+      tutorialOpen: false,
+      tutorialSeen: false,
       setBase: (base) => set({ base }),
       toggleOverlay: (key) => set((s) => ({ overlays: { ...s.overlays, [key]: !s.overlays[key] } })),
       setImagery: (imagery) => set({ imagery }),
@@ -69,6 +80,9 @@ export const useApp = create<AppState>()(
       setFullDay: (fullDay) => set({ fullDay }),
       setShadowQuality: (shadowQuality) => set({ shadowQuality }),
       setShadowStatus: (shadowStatus) => set({ shadowStatus }),
+      setLayersOpen: (layersOpen) => set({ layersOpen }),
+      openTutorial: () => set({ tutorialOpen: true, layersOpen: false }),
+      closeTutorial: () => set({ tutorialOpen: false, tutorialSeen: true }),
     }),
     {
       name: 'helios.settings',
@@ -83,6 +97,7 @@ export const useApp = create<AppState>()(
         pin: s.pin,
         fullDay: s.fullDay,
         shadowQuality: s.shadowQuality,
+        tutorialSeen: s.tutorialSeen,
       }),
       // Overlays saved by an older version lack newer keys; fill them with defaults.
       merge: (persisted, current) => {

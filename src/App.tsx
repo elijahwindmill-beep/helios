@@ -6,6 +6,7 @@ import { MapButtons } from './ui/MapButtons';
 import { AboutDialog } from './ui/AboutDialog';
 import { SunCard } from './ui/SunCard';
 import { SunArc } from './ui/SunArc';
+import { Tutorial } from './ui/Tutorial';
 
 export function App() {
   return (
@@ -18,6 +19,7 @@ export function App() {
       <MapButtons />
       <CameraReadout />
       <AboutDialog />
+      <Tutorial />
     </div>
   );
 }
