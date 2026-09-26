@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Alpenglow direction</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;family=Manrope:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;font-family:Manrope,sans-serif;background:#14181D;color:#EDEBE6}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #14181D">
+
+<svg width="1440" height="900" viewBox="0 0 1440 900" style="position: absolute; left: 0; top: 0" aria-hidden="true">
+<defs>
+<linearGradient id="ab" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2E3A2B"></stop><stop offset="1" stop-color="#586646"></stop></linearGradient>
+<filter id="ablur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="7"></feGaussianBlur></filter>
+<filter id="agrain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4"></feTurbulence><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.5 0"></feColorMatrix></filter>
+</defs>
+<rect width="1440" height="900" fill="url(#ab)"></rect>
+<ellipse cx="300" cy="700" rx="260" ry="150" fill="#22331F"></ellipse>
+<ellipse cx="520" cy="820" rx="220" ry="110" fill="#22331F"></ellipse>
+<ellipse cx="1180" cy="240" rx="220" ry="120" fill="#6E7F52"></ellipse>
+<ellipse cx="1250" cy="560" rx="200" ry="130" fill="#6E7F52"></ellipse>
+<polygon points="470,250 620,170 760,200 900,300 1000,470 860,560 640,600 500,480" fill="#9A9683"></polygon>
+<polygon points="760,200 900,300 1000,470 860,560 720,430" fill="#D8CDB0"></polygon>
+<polygon points="470,250 620,170 760,200 720,430 500,480" fill="#4B4E4C"></polygon>
+<polygon points="720,430 860,560 640,600 500,480" fill="#7E7B6B"></polygon>
+<polygon points="470,250 300,330 250,520 500,480" fill="#0E1A1C" opacity="0.5" filter="url(#ablur)"></polygon>
+<polygon points="620,170 560,90 700,60 760,200" fill="#0E1A1C" opacity="0.4" filter="url(#ablur)"></polygon>
+<rect width="1440" height="900" filter="url(#agrain)" opacity="0.35"></rect>
+<ellipse cx="720" cy="430" rx="330" ry="122" fill="none" stroke="#FFB84A" stroke-opacity="0.7" stroke-width="1.5" stroke-dasharray="4 6"></ellipse>
+<path d="M250 610 C400 540 520 560 640 490 S900 380 1010 300" fill="none" stroke="#5B8DEF" stroke-width="3.5" stroke-linecap="round"></path>
+</svg>
+<div style="position: absolute; left: 1010px; top: 356px; width: 30px; height: 30px; border-radius: 50%; background: #FFB84A; box-shadow: 0 0 0 10px rgba(255,184,74,0.25), 0 0 40px 12px rgba(255,184,74,0.45)"></div>
+<div style="position: absolute; left: 1052px; top: 358px; padding: 5px 10px; border-radius: 8px; background: rgba(20,24,29,0.88); border: 1px solid #2A323C; font-family: 'JetBrains Mono', monospace; font-size: 12px">10:06 · 127.2° · 28.4°</div>
+<div style="position: absolute; left: 707px; top: 402px; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: #FF6B4A; border: 2px solid #14181D"></div>
+<div style="position: absolute; left: 744px; top: 402px; padding: 5px 10px; border-radius: 8px; background: rgba(20,24,29,0.88); border: 1px solid #2A323C; font-size: 13px; font-weight: 600">Seceda Ridgeline</div>
+
+<div style="position: absolute; left: 24px; top: 24px; height: 48px; box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 0 18px; border-radius: 24px; background: rgba(20,24,29,0.9); border: 1px solid #2A323C">
+<span style="width: 10px; height: 10px; border-radius: 50%; background: #FFB84A"></span>
+<span style="font-size: 14px; font-weight: 600">Seceda · Oct shoot</span>
+<span style="font-size: 12px; color: #9AA3AE">Saved</span>
+</div>
+<label style="position: absolute; left: 480px; top: 24px; width: 480px; height: 48px; box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 0 18px; border-radius: 24px; background: rgba(20,24,29,0.9); border: 1px solid #2A323C">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA3AE" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+<input value="Seceda Ridgeline" aria-label="Search place" style="flex-grow: 1; border: 0; outline: 0; background: transparent; font-family: inherit; font-size: 15px; color: #EDEBE6">
+</label>
+<div style="position: absolute; right: 24px; top: 24px; display: flex; gap: 8px">
+<button style="height: 48px; padding: 0 20px; border-radius: 24px; border: 1px solid #2A323C; background: rgba(20,24,29,0.9); color: #EDEBE6; font-size: 14px; font-weight: 600">Share</button>
+<button style="height: 48px; padding: 0 20px; border-radius: 24px; border: 0; background: #FFB84A; color: #14181D; font-size: 14px; font-weight: 700">Export video</button>
+</div>
+
+<div style="position: absolute; left: 24px; top: 96px; width: 56px; box-sizing: border-box; padding: 4px; display: flex; flex-direction: column; gap: 4px; border-radius: 16px; background: rgba(20,24,29,0.9); border: 1px solid #2A323C">
+<button aria-label="Layers" aria-pressed="true" style="width: 48px; height: 48px; border-radius: 12px; border: 0; background: #2A323C; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFB84A" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"></path><path d="M3 13l9 5 9-5"></path></svg></button>
+<button aria-label="Places" style="width: 48px; height: 48px; border-radius: 12px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDEBE6" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg></button>
+<button aria-label="Routes" style="width: 48px; height: 48px; border-radius: 12px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDEBE6" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="18" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><path d="M8.5 18H14a3 3 0 000-6h-4a3 3 0 010-6h5.5"></path></svg></button>
+<button aria-label="Photos" style="width: 48px; height: 48px; border-radius: 12px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDEBE6" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="9" cy="10" r="1.5"></circle><path d="M21 16l-5-5-8 8"></path></svg></button>
+<button aria-label="Sun" style="width: 48px; height: 48px; border-radius: 12px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDEBE6" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"></path></svg></button>
+</div>
+
+<div style="position: absolute; left: 92px; top: 96px; width: 248px; box-sizing: border-box; padding: 14px 14px 8px; border-radius: 16px; background: rgba(20,24,29,0.92); border: 1px solid #2A323C">
+<div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA3AE; margin-bottom: 6px">Layers</div>
+<sc-for list="{{layers}}" as="item" hint-placeholder-count="7">
+<button aria-pressed="{{item.on}}" style="display: flex; align-items: center; gap: 10px; width: 100%; height: 44px; padding: 0; border: 0; border-top: 1px solid #232A33; background: transparent; text-align: left; color: #EDEBE6">
+<span style="width: 10px; height: 10px; border-radius: 50%; background: {{item.swatch}}"></span>
+<span style="flex-grow: 1; font-size: 14px">{{item.name}}</span>
+<span style="position: relative; width: 34px; height: 20px; border-radius: 10px; background: {{item.track}}">
+<span style="position: absolute; top: 2px; left: {{item.knob}}px; width: 16px; height: 16px; border-radius: 50%; background: #14181D"></span>
+</span>
+</button>
+</sc-for>
+</div>
+
+<div style="position: absolute; left: 1116px; top: 96px; width: 300px; box-sizing: border-box; padding: 16px; border-radius: 16px; background: rgba(20,24,29,0.92); border: 1px solid #2A323C">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<span style="font-size: 15px; font-weight: 700">Keyframe 3 of 6</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #FF6B4A">0:12</span>
+</div>
+<div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA3AE; margin: 16px 0 8px">Sun</div>
+<div style="display: flex; gap: 8px">
+<div style="flex: 1; padding: 8px 10px; border-radius: 10px; background: #1D232B"><div style="font-size: 11px; color: #9AA3AE">Time</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 15px">10:06</div></div>
+<div style="flex: 1; padding: 8px 10px; border-radius: 10px; background: #1D232B"><div style="font-size: 11px; color: #9AA3AE">Date</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 15px">26/09/2026</div></div>
+</div>
+<div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA3AE; margin: 16px 0 8px">Camera</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<div style="padding: 8px 10px; border-radius: 10px; background: #1D232B"><div style="font-size: 11px; color: #9AA3AE">Latitude</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 14px">46.60068</div></div>
+<div style="padding: 8px 10px; border-radius: 10px; background: #1D232B"><div style="font-size: 11px; color: #9AA3AE">Longitude</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 14px">11.72598</div></div>
+<div style="padding: 8px 10px; border-radius: 10px; background: #1D232B"><div style="font-size: 11px; color: #9AA3AE">Zoom</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 14px">14.51</div></div>
+<div style="padding: 8px 10px; border-radius: 10px; background: #1D232B"><div style="font-size: 11px; color: #9AA3AE">Heading</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 14px">0°</div></div>
+<div style="padding: 8px 10px; border-radius: 10px; background: #1D232B"><div style="font-size: 11px; color: #9AA3AE">Tilt</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 14px">45°</div></div>
+</div>
+<div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA3AE; margin: 16px 0 8px">Easing to next</div>
+<div style="display: flex; padding: 3px; gap: 3px; border-radius: 10px; background: #1D232B">
+<button style="flex: 1; height: 36px; border: 0; border-radius: 8px; background: transparent; color: #C4CAD2; font-size: 13px">Linear</button>
+<button aria-pressed="true" style="flex: 1; height: 36px; border: 0; border-radius: 8px; background: #2A323C; color: #FFB84A; font-size: 13px; font-weight: 700">Ease</button>
+<button style="flex: 1; height: 36px; border: 0; border-radius: 8px; background: transparent; color: #C4CAD2; font-size: 13px">Hold</button>
+</div>
+<div style="display: flex; gap: 8px; margin-top: 16px">
+<button style="flex: 1; height: 44px; border-radius: 12px; border: 1px solid #FFB84A; background: transparent; color: #FFB84A; font-size: 13px; font-weight: 700">Set from view</button>
+<button style="height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid #2A323C; background: transparent; color: #C4CAD2; font-size: 13px">Delete</button>
+</div>
+</div>
+
+<div style="position: absolute; left: 24px; top: 636px; width: 1392px; height: 240px; box-sizing: border-box; padding: 12px 16px; border-radius: 18px; background: rgba(20,24,29,0.95); border: 1px solid #2A323C">
+<div style="display: flex; align-items: center; gap: 8px; height: 44px">
+<button aria-label="Previous keyframe" style="width: 44px; height: 44px; border-radius: 12px; border: 0; background: #1D232B; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EDEBE6" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 5v14M19 5l-9 7 9 7z"></path></svg></button>
+<button aria-label="Play" style="width: 44px; height: 44px; border-radius: 12px; border: 0; background: #FFB84A; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="#14181D" stroke="#14181D" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M8 5l11 7-11 7z"></path></svg></button>
+<button aria-label="Next keyframe" style="width: 44px; height: 44px; border-radius: 12px; border: 0; background: #1D232B; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EDEBE6" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 5v14M5 5l9 7-9 7z"></path></svg></button>
+<span style="margin-left: 10px; font-family: 'JetBrains Mono', monospace; font-size: 18px">0:12.0</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #9AA3AE">/ 0:30</span>
+<span style="flex-grow: 1"></span>
+<button style="height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid #2A323C; background: transparent; color: #EDEBE6; font-size: 13px; font-weight: 600">◇ Add keyframe</button>
+<button style="height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid #2A323C; background: transparent; color: #EDEBE6; font-size: 13px; font-weight: 600">Split clip</button>
+</div>
+
+<div style="display: flex; gap: 12px; margin-top: 8px">
+<div style="width: 88px; padding-top: 24px; display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #9AA3AE">
+<div style="height: 30px; display: flex; align-items: center">Clips</div>
+<div style="height: 30px; display: flex; align-items: center">Sun time</div>
+<div style="height: 30px; display: flex; align-items: center">Camera</div>
+<div style="height: 30px; display: flex; align-items: center">Layers</div>
+</div>
+<div style="position: relative; width: 1200px">
+<div style="position: relative; height: 24px; background-image: repeating-linear-gradient(90deg,#3A434E 0,#3A434E 1px,transparent 1px,transparent 40px); background-size: 100% 7px; background-repeat: no-repeat; background-position: left bottom">
+<sc-for list="{{ticks}}" as="t" hint-placeholder-count="7">
+<span style="position: absolute; top: 0; left: {{t.left}}px; padding-left: 4px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9AA3AE">{{t.label}}</span>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="position: relative; height: 30px; background: #1A2027; border-radius: 6px">
+<div style="position: absolute; left: 0; top: 3px; width: 636px; height: 24px; box-sizing: border-box; padding: 0 10px; display: flex; align-items: center; border-radius: 6px; background: #4A3A1E; border: 1px solid #FFB84A; font-size: 12px; font-weight: 600; color: #FFD9A0">Sunrise ridge · 0:16</div>
+<div style="position: absolute; left: 644px; top: 3px; width: 556px; height: 24px; box-sizing: border-box; padding: 0 10px; display: flex; align-items: center; border-radius: 6px; background: #1F2C44; border: 1px solid #5B8DEF; font-size: 12px; font-weight: 600; color: #B9CEF7">Valley light · 0:14</div>
+</div>
+<div style="position: relative; height: 30px; background: #1A2027; border-radius: 6px">
+<sc-for list="{{timeKeys}}" as="k" hint-placeholder-count="4">
+<div style="position: absolute; left: {{k.left}}px; top: 0; height: 30px; display: flex; align-items: center">
+<div style="width: 12px; height: 12px; margin-left: -6px; transform: rotate(45deg); background: #FFB84A"></div>
+<span style="margin-left: 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #EDEBE6">{{k.label}}</span>
+</div>
+</sc-for>
+</div>
+<div style="position: relative; height: 30px; background: #1A2027; border-radius: 6px">
+<sc-for list="{{camKeys}}" as="k" hint-placeholder-count="6">
+<div style="position: absolute; left: {{k.left}}px; top: 9px; width: 12px; height: 12px; margin-left: -6px; transform: rotate(45deg); background: {{k.fill}}"></div>
+</sc-for>
+</div>
+<div style="position: relative; height: 30px; background: #1A2027; border-radius: 6px">
+<div style="position: absolute; left: 0; top: 4px; width: 1200px; height: 8px; border-radius: 4px; background: #5B8DEF; opacity: 0.6"></div>
+<div style="position: absolute; left: 200px; top: 16px; width: 620px; height: 8px; border-radius: 4px; background: #FF6B4A; opacity: 0.6"></div>
+</div>
+</div>
+<div style="position: absolute; left: 480px; top: 0; bottom: 0; width: 2px; background: #FF6B4A"></div>
+<div style="position: absolute; left: 472px; top: 0; width: 18px; height: 12px; background: #FF6B4A; border-radius: 3px 3px 9px 9px"></div>
+</div>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const L = (name, swatch, isOn) => ({ name, swatch, on: isOn, track: isOn ? '#FFB84A' : '#3A434E', knob: isOn ? 16 : 2 });
+    return {
+      layers: [
+        L('Satellite', '#586646', true),
+        L('Paper base', '#F4F1EA', false),
+        L('Cast shadows', '#0E1A1C', true),
+        L('Sun path', '#FFB84A', true),
+        L('Routes', '#5B8DEF', true),
+        L('Places', '#FF6B4A', true),
+        L('Photos', '#EDEBE6', false)
+      ],
+      ticks: [0, 5, 10, 15, 20, 25, 30].map((s) => ({ left: s * 40, label: '0:' + String(s).padStart(2, '0') })),
+      timeKeys: [{ left: 0, label: '07:05' }, { left: 480, label: '10:06' }, { left: 644, label: '16:30' }, { left: 1190, label: '18:40' }],
+      camKeys: [0, 240, 480, 644, 920, 1190].map((l, i) => ({ left: l, fill: i === 2 ? '#FF6B4A' : '#5B8DEF' }))
+    };
+  }
+}
+</script>
+</body>
+</html>
