@@ -54,7 +54,7 @@ export const IMAGERY: Record<ImageryId, ImageryProvider> = {
     needsKey: false,
     source: () => ({
       tiles: [
-        'https://geoservices.buergernetz.bz.it/mapproxy/ows?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=p_bz-Orthoimagery:Aerial-2023-RGB&STYLE=default&TILEMATRIXSET=EPSG_3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg',
+        'https://geoservices.buergernetz.bz.it/mapproxy/ows?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=p_bz-Orthoimagery:Aerial-2023-RGB&STYLE=default&TILEMATRIXSET=EPSG_3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png',
       ],
       tileSize: 256,
       maxzoom: 20,
