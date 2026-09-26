@@ -30,6 +30,11 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
      - 2 fingers: pinch to move the camera closer or further, twist to rotate.
      - 3 fingers drag: orbit (up/down tilts, left/right rotates).
    - Tutorial overlay on first visit that shows the 1, 2 and 3 finger gestures, with a cross (×) button to close it. Once closed it stays closed, and a "?" button brings it back.
+2. **Real-world light colour (white balance) through the day** (after the mobile task, requested 26 Sep 2026)
+   - As the sun nears the horizon the whole scene warms like real light: neutral daylight (about 5500 K) at high sun, warming through golden hour (sun below about 6°) to deep orange at sunset, then the cool blue of blue hour (sun 4° to 6° below the horizon) and dark night after that.
+   - Driven by the real sun elevation at the pin, so it follows the time and date sliders, the arc and (later) keyframed clips.
+   - Sunlit ground takes the warm sun colour, shadows take the cooler sky-blue fill, and the sky and horizon haze change with it.
+   - Drawn into the map image itself (not a screen overlay), so exported videos include it. An on/off toggle keeps a neutral view for plain scouting.
 
 ## Using it
 
