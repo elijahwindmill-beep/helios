@@ -1,0 +1,539 @@
+import { MercatorCoordinate, type CustomLayerInterface, type Map as MlMap } from 'maplibre-gl';
+import { useApp } from '../store/app';
+import { sunPosition } from '../sun/position';
+import { dayTimes, HORIZON_GEOMETRIC, seasons } from '../sun/times';
+import { formatClock, startOfZonedDay, timeZoneAt, zonedToUtc } from '../sun/timezone';
+import { solveDateTime, solveTimeOnDay, skyVector, type SkyDirection } from '../sun/solver';
+import { EARTH_RADIUS } from '../map/cameraMath';
+import { invert, multiply, pixelRay, raySphere, toScreen, transform, type Mat4, type Vec3 } from './projection';
+
+// The Shadowmap-style sun scene around the pin: compass ring on the ground, today's sun
+// path, solstice and equinox paths, the sun with its ray, and labels. It is drawn on a 2D
+// canvas over the map, projected with the map's own camera matrix every frame (captured by
+// a custom layer), so it moves with the 3D view exactly.
+//
+// The sky is a dome centred on the pin; a sun direction (azimuth, elevation) sits on it at
+// the dome radius. The radius follows the zoom so the ring keeps a steady size on screen.
+
+const AMBER = '#E8A317';
+const AMBER_LINE = '#C98A0F';
+const INK = '#1F1D1A';
+const PAPER = '#FBFAF7';
+
+/** Sun and its reach, in CSS pixels. */
+const SUN_HIT_PX = 28;
+
+interface PathPoint {
+  t: number;
+  dir: Vec3;
+}
+interface DayPaths {
+  key: string;
+  today: PathPoint[][];
+  rise: PathPoint | null;
+  set: PathPoint | null;
+  refs: Array<{ label: string; style: 'dash' | 'dot'; dayStart: number; dayEnd: number; runs: PathPoint[][]; apex: PathPoint | null }>;
+}
+
+function dirOf(t: number, lat: number, lng: number): Vec3 {
+  const s = sunPosition(t, lat, lng);
+  return skyVector(s.azimuth, s.elevationTrue);
+}
+
+/** The sun's path over a local day, split into runs above the horizon. */
+function pathRuns(dayStart: number, dayEnd: number, lat: number, lng: number): PathPoint[][] {
+  const runs: PathPoint[][] = [];
+  let run: PathPoint[] = [];
+  const step = 4 * 60000;
+  for (let t = dayStart; t <= dayEnd; t += step) {
+    const dir = dirOf(t, lat, lng);
+    if (dir[2] >= 0) run.push({ t, dir });
+    else if (run.length) {
+      runs.push(run);
+      run = [];
+    }
+  }
+  if (run.length) runs.push(run);
+  // Pin the ends exactly onto the horizon so the path meets the ring.
+  return runs.map((r) =>
+    r.map((p, i) => (i === 0 || i === r.length - 1) && p.dir[2] < 0.02 ? { t: p.t, dir: [p.dir[0], p.dir[1], 0] as Vec3 } : p),
+  );
+}
+
+export function installSunScene(map: MlMap): () => void {
+  const container = map.getCanvasContainer();
+  const canvas = document.createElement('canvas');
+  canvas.className = 'sun-scene';
+  canvas.setAttribute('aria-hidden', 'true');
+  container.insertBefore(canvas, map.getCanvas().nextSibling);
+  const ctx = canvas.getContext('2d')!;
+
+  let matrix: Mat4 | null = null;
+  let localToClip: Float64Array | null = null;
+  let radius = 1000;
+  let sunScreen: [number, number] | null = null;
+  let paths: DayPaths | null = null;
+  let yearStarts: { key: string; starts: number[] } | null = null;
+
+  const resize = () => {
+    const w = map.getCanvas().clientWidth;
+    const h = map.getCanvas().clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+  };
+  resize();
+  map.on('resize', resize);
+
+  const getPaths = (lat: number, lng: number, time: number, tz: string): DayPaths => {
+    const day = dayTimes(time, lat, lng, tz, HORIZON_GEOMETRIC);
+    const key = `${lat.toFixed(5)},${lng.toFixed(5)},${tz},${day.dayStart}`;
+    if (paths?.key === key) return paths;
+    const year = new Date(day.solarNoon).getUTCFullYear();
+    const s = seasons(year);
+    const north = lat >= 0;
+    const refDays = [
+      { label: north ? 'Summer solstice' : 'Winter solstice', ms: s.juneSolstice, style: 'dash' as const },
+      { label: north ? 'Winter solstice' : 'Summer solstice', ms: s.decemberSolstice, style: 'dash' as const },
+      { label: 'Equinox', ms: s.marchEquinox, style: 'dot' as const },
+    ];
+    paths = {
+      key,
+      today: pathRuns(day.dayStart, day.dayEnd, lat, lng),
+      rise: day.sunrise !== null ? { t: day.sunrise, dir: flat(dirOf(day.sunrise, lat, lng)) } : null,
+      set: day.sunset !== null ? { t: day.sunset, dir: flat(dirOf(day.sunset, lat, lng)) } : null,
+      refs: refDays.map((r) => {
+        const dayStart = startOfZonedDay(r.ms, tz);
+        const dayEnd = startOfZonedDay(dayStart + 26 * 3600000, tz);
+        const runs = pathRuns(dayStart, dayEnd, lat, lng);
+        const all = runs.flat();
+        const apex = all.reduce<PathPoint | null>((b, p) => (!b || p.dir[2] > b.dir[2] ? p : b), null);
+        return { label: r.label, style: r.style, dayStart, dayEnd, runs, apex };
+      }),
+    };
+    return paths;
+  };
+
+  // ---- Drawing ----
+
+  const draw = () => {
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.width / dpr;
+    const H = canvas.height / dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    sunScreen = null;
+    const s = useApp.getState();
+    const { compass, sunPath, solstices } = s.overlays;
+    if (!matrix || !(compass || sunPath || solstices)) return;
+
+    // Local frame: metres east, north, up from the pin on the ground.
+    // MapLibre 6's custom-layer world space is x/y in world pixels at the current zoom
+    // (Mercator x 512 x 2^zoom) and z in metres (checked against map.project()).
+    const pin = s.pin;
+    const ground = map.queryTerrainElevation([pin.lng, pin.lat]) ?? 0;
+    const origin = MercatorCoordinate.fromLngLat([pin.lng, pin.lat]);
+    const worldSize = 512 * 2 ** map.getZoom();
+    const pxPerMeter = origin.meterInMercatorCoordinateUnits() * worldSize;
+    const toWorld = [pxPerMeter, 0, 0, 0, 0, -pxPerMeter, 0, 0, 0, 0, 1, 0, origin.x * worldSize, origin.y * worldSize, ground, 1];
+    localToClip = multiply(matrix, toWorld);
+    const m = localToClip;
+
+    // Ring size: steady on screen, about 30% of the smaller side.
+    const ringPx = Math.max(110, Math.min(240, 0.3 * Math.min(W, H)));
+    const mpp = (2 * Math.PI * EARTH_RADIUS * Math.cos((pin.lat * Math.PI) / 180)) / (512 * 2 ** map.getZoom());
+    radius = ringPx * mpp;
+    const R = radius;
+
+    const P = (v: Vec3) => transform(m, [v[0] * R, v[1] * R, v[2] * R]);
+    const S = (v: Vec3) => toScreen(P(v), W, H);
+
+    // Polyline through dome points, skipping pieces behind the camera.
+    const polyline = (pts: Vec3[], closed = false) => {
+      ctx.beginPath();
+      let pen = false;
+      const list = closed ? [...pts, pts[0]] : pts;
+      for (const p of list) {
+        const q = S(p);
+        if (!q) {
+          pen = false;
+          continue;
+        }
+        if (pen) ctx.lineTo(q[0], q[1]);
+        else ctx.moveTo(q[0], q[1]);
+        pen = true;
+      }
+    };
+    const circle = (r: number, n = 120): Vec3[] =>
+      Array.from({ length: n }, (_, i) => {
+        const a = (i / n) * 2 * Math.PI;
+        return [Math.sin(a) * r, Math.cos(a) * r, 0];
+      });
+
+    const tz = timeZoneAt(pin.lat, pin.lng);
+    const dp = getPaths(pin.lat, pin.lng, s.time, tz);
+    // Labels are placed after the lines, most important first, skipping any that would
+    // overlap one already placed (after trying a nudge up or down).
+    const labels: Array<{ priority: number; draw: () => void }> = [];
+    const label = (priority: number, draw: () => void) => labels.push({ priority, draw });
+    placed = [];
+
+    // Compass ring on the ground.
+    if (compass) {
+      const outer = circle(1);
+      const inner = circle(0.9);
+      const so = outer.map(S);
+      const si = inner.map(S);
+      if (so.every(Boolean) && si.every(Boolean)) {
+        ctx.beginPath();
+        so.forEach((q, i) => (i ? ctx.lineTo(q![0], q![1]) : ctx.moveTo(q![0], q![1])));
+        ctx.closePath();
+        si.forEach((q, i) => (i ? ctx.lineTo(q![0], q![1]) : ctx.moveTo(q![0], q![1])));
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(251,250,247,0.62)';
+        ctx.fill('evenodd');
+      }
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(31,29,26,0.35)';
+      polyline(outer, true);
+      ctx.stroke();
+      polyline(inner, true);
+      ctx.stroke();
+      for (let deg = 0; deg < 360; deg += 10) {
+        const a = (deg * Math.PI) / 180;
+        const major = deg % 30 === 0;
+        const r0 = major ? 0.9 : 0.94;
+        polyline([
+          [Math.sin(a) * r0, Math.cos(a) * r0, 0],
+          [Math.sin(a), Math.cos(a), 0],
+        ]);
+        ctx.strokeStyle = major ? 'rgba(31,29,26,0.7)' : 'rgba(31,29,26,0.4)';
+        ctx.lineWidth = major ? 1.4 : 1;
+        ctx.stroke();
+        if (major) {
+          const cardinal = { 0: 'N', 90: 'E', 180: 'S', 270: 'W' }[deg];
+          const q = S([Math.sin(a) * 1.1, Math.cos(a) * 1.1, 0]);
+          if (q)
+            label(cardinal ? 3 : 1, () =>
+              text(q, cardinal ?? String(deg), cardinal ? '600 13px "Instrument Sans", sans-serif' : '500 10px "JetBrains Mono", monospace', cardinal ? INK : 'rgba(31,29,26,0.75)'),
+            );
+        }
+      }
+    }
+
+    // Solstice and equinox paths: dashed and dotted.
+    if (solstices) {
+      for (const ref of dp.refs) {
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.setLineDash(ref.style === 'dash' ? [7, 6] : [1, 6]);
+        for (const run of ref.runs) {
+          polyline(run.map((p) => p.dir));
+          ctx.strokeStyle = 'rgba(31,29,26,0.45)';
+          ctx.lineWidth = ref.style === 'dash' ? 3.5 : 4.5;
+          ctx.stroke();
+          ctx.strokeStyle = 'rgba(251,250,247,0.95)';
+          ctx.lineWidth = ref.style === 'dash' ? 2 : 3;
+          ctx.stroke();
+        }
+        ctx.restore();
+        if (ref.apex) {
+          const q = S(ref.apex.dir);
+          if (q) label(2, () => pill([q[0], q[1] - 14], ref.label, 'rgba(59,74,90,0.88)', PAPER, '500 11px "Instrument Sans", sans-serif'));
+        }
+      }
+    }
+
+    // Today's path and the sun.
+    if (sunPath) {
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (const run of dp.today) {
+        polyline(run.map((p) => p.dir));
+        ctx.strokeStyle = 'rgba(31,29,26,0.35)';
+        ctx.lineWidth = 5;
+        ctx.stroke();
+        ctx.strokeStyle = AMBER;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+      for (const b of [dp.rise, dp.set]) {
+        if (!b) continue;
+        const q = S(b.dir);
+        if (q) label(8, () => pill(q, formatClock(b.t, tz), AMBER, INK, '600 11px "JetBrains Mono", monospace'));
+      }
+
+      const sun = sunPosition(s.time, pin.lat, pin.lng);
+      const dir = skyVector(sun.azimuth, sun.elevationTrue);
+      const aboveHorizon = sun.elevationTrue > -1;
+      const groundDir: Vec3 = [dir[0] / Math.hypot(dir[0], dir[1]), dir[1] / Math.hypot(dir[0], dir[1]), 0];
+
+      // Direction on the ground and the ray from the pin to the sun.
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = 'rgba(31,29,26,0.6)';
+      polyline([[0, 0, 0], groundDir]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      if (aboveHorizon) {
+        polyline([[0, 0, 0], dir]);
+        ctx.strokeStyle = AMBER_LINE;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      const az = S([groundDir[0] * 1.02, groundDir[1] * 1.02, 0]);
+      if (az) label(6, () => pill(az, `${sun.azimuth.toFixed(1)}°`, 'rgba(251,250,247,0.95)', INK, '500 11px "JetBrains Mono", monospace'));
+      if (aboveHorizon) {
+        const el = S([dir[0] * 0.45, dir[1] * 0.45, dir[2] * 0.45]);
+        if (el) label(6, () => pill([el[0] + 30, el[1]], `△ ${sun.elevation.toFixed(1)}°`, 'rgba(251,250,247,0.95)', INK, '500 11px "JetBrains Mono", monospace'));
+        const q = S(dir);
+        if (q) {
+          sunScreen = q;
+          const glow = ctx.createRadialGradient(q[0], q[1], 4, q[0], q[1], 34);
+          glow.addColorStop(0, 'rgba(255,214,102,0.95)');
+          glow.addColorStop(0.45, 'rgba(232,163,23,0.45)');
+          glow.addColorStop(1, 'rgba(232,163,23,0)');
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(q[0], q[1], 34, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(q[0], q[1], 12, 0, 2 * Math.PI);
+          ctx.fillStyle = AMBER;
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = INK;
+          ctx.stroke();
+          label(10, () => pill([q[0] + 44, q[1]], formatClock(s.time, tz), PAPER, INK, '600 13px "JetBrains Mono", monospace'));
+          placed.push([q[0] - 14, q[1] - 14, q[0] + 14, q[1] + 14]); // the sun itself
+        }
+      }
+    }
+
+    labels.sort((a, b) => b.priority - a.priority);
+    for (const l of labels) l.draw();
+  };
+
+  // Screen boxes of labels drawn this frame: [x0, y0, x1, y1].
+  let placed: Array<[number, number, number, number]> = [];
+  /** Finds a free spot for a w x h box centred near q (as is, nudged down, nudged up). */
+  const place = (q: [number, number], w: number, h: number): [number, number] | null => {
+    for (const dy of [0, h + 2, -(h + 2)]) {
+      const box: [number, number, number, number] = [q[0] - w / 2, q[1] + dy - h / 2, q[0] + w / 2, q[1] + dy + h / 2];
+      if (!placed.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) {
+        placed.push(box);
+        return [q[0], q[1] + dy];
+      }
+    }
+    return null;
+  };
+
+  const text = (at: [number, number], s: string, font: string, color: string) => {
+    ctx.font = font;
+    const q = place(at, ctx.measureText(s).width + 4, 14);
+    if (!q) return;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(251,250,247,0.85)';
+    ctx.strokeText(s, q[0], q[1]);
+    ctx.fillStyle = color;
+    ctx.fillText(s, q[0], q[1]);
+  };
+
+  const pill = (at: [number, number], s: string, bg: string, fg: string, font: string) => {
+    ctx.font = font;
+    const w = ctx.measureText(s).width + 14;
+    const h = 20;
+    const q = place(at, w, h);
+    if (!q) return;
+    const x = q[0] - w / 2;
+    const y = q[1] - h / 2;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 7);
+    ctx.fillStyle = bg;
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(31,29,26,0.25)';
+    ctx.stroke();
+    ctx.fillStyle = fg;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(s, q[0], q[1] + 0.5);
+  };
+
+  // ---- The custom layer only borrows the camera matrix each frame ----
+
+  const layer: CustomLayerInterface = {
+    id: 'sun-scene',
+    type: 'custom',
+    renderingMode: '3d',
+    render: (_gl, args) => {
+      matrix = args.modelViewProjectionMatrix;
+      draw();
+    },
+  };
+  map.addLayer(layer);
+
+  const unsubscribe = useApp.subscribe((now, prev) => {
+    if (now.time !== prev.time || now.pin !== prev.pin || now.overlays !== prev.overlays) map.triggerRepaint();
+  });
+
+  // ---- Dragging the sun ----
+
+  let dragging: { shift: boolean } | null = null;
+  let pending: { x: number; y: number; shift: boolean } | null = null;
+  let frame = 0;
+
+  const local = (clientX: number, clientY: number): [number, number] => {
+    const r = canvas.getBoundingClientRect();
+    return [clientX - r.left, clientY - r.top];
+  };
+  const nearSun = (x: number, y: number) => !!sunScreen && Math.hypot(x - sunScreen[0], y - sunScreen[1]) < SUN_HIT_PX;
+
+  /** Sky direction under a canvas pixel: where the pointer ray meets the dome. */
+  const skyAt = (x: number, y: number): SkyDirection | null => {
+    if (!localToClip) return null;
+    const inv = invert(localToClip);
+    if (!inv) return null;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
+    const { origin, dir } = pixelRay(inv, x, y, W, H);
+    const R = radius;
+    const s = useApp.getState();
+    const cur = sunPosition(s.time, s.pin.lat, s.pin.lng);
+    const curV = skyVector(cur.azimuth, cur.elevationTrue);
+    let hits = raySphere(origin, dir, R);
+    if (!hits.length) {
+      // Missed the dome: use the point of the ray closest to it.
+      const t = -(origin[0] * dir[0] + origin[1] * dir[1] + origin[2] * dir[2]);
+      hits = [[origin[0] + dir[0] * t, origin[1] + dir[1] * t, origin[2] + dir[2] * t]];
+    }
+    // The ray crosses the dome twice; keep the crossing nearest the sun's current spot so
+    // dragging is continuous whether the sun is on the near or the far side.
+    let best = hits[0];
+    let bestDot = -Infinity;
+    for (const h of hits) {
+      const l = Math.hypot(...h);
+      const d = (h[0] * curV[0] + h[1] * curV[1] + h[2] * curV[2]) / l;
+      if (d > bestDot) {
+        bestDot = d;
+        best = h;
+      }
+    }
+    const l = Math.hypot(...best);
+    return {
+      azimuth: ((Math.atan2(best[0], best[1]) * 180) / Math.PI + 360) % 360,
+      elevation: (Math.asin(Math.max(-1, Math.min(1, best[2] / l))) * 180) / Math.PI,
+    };
+  };
+
+  const yearDayStarts = (year: number, tz: string): number[] => {
+    const key = `${year},${tz}`;
+    if (yearStarts?.key === key) return yearStarts.starts;
+    const starts: number[] = [];
+    for (let d = 0; d <= 366; d++) {
+      const dt = new Date(Date.UTC(year, 0, 1 + d));
+      starts.push(zonedToUtc({ year: dt.getUTCFullYear(), month: dt.getUTCMonth() + 1, day: dt.getUTCDate(), hour: 0, minute: 0 }, tz));
+    }
+    yearStarts = { key, starts };
+    return starts;
+  };
+
+  const applyDrag = () => {
+    frame = 0;
+    if (!pending) return;
+    const { x, y, shift } = pending;
+    pending = null;
+    const target = skyAt(x, y);
+    if (!target) return;
+    const s = useApp.getState();
+    const { lat, lng } = s.pin;
+    const tz = timeZoneAt(lat, lng);
+    let time: number;
+    if (shift) {
+      // Shift: any date and time of the year.
+      const year = new Date(s.time).getUTCFullYear();
+      time = solveDateTime(lat, lng, yearDayStarts(year, tz), target, s.time).time;
+    } else {
+      const day = dayTimes(s.time, lat, lng, tz);
+      const sol = solveTimeOnDay(lat, lng, day.dayStart, day.dayEnd, target);
+      time = sol.time;
+      // Dragged well off today's path onto a solstice or equinox path: snap to that day.
+      if (sol.error > 2 && paths) {
+        for (const ref of paths.refs) {
+          const r = solveTimeOnDay(lat, lng, ref.dayStart, ref.dayEnd, target);
+          if (r.error < 1.2) {
+            time = r.time;
+            break;
+          }
+        }
+      }
+    }
+    s.setTime(time);
+  };
+
+  const onDown = (e: MouseEvent | TouchEvent) => {
+    const pt = 'touches' in e ? (e.touches.length === 1 ? e.touches[0] : null) : e.button === 0 ? e : null;
+    if (!pt) return;
+    const [x, y] = local(pt.clientX, pt.clientY);
+    if (!useApp.getState().overlays.sunPath || !nearSun(x, y)) return;
+    dragging = { shift: e.shiftKey };
+    e.stopPropagation();
+    e.preventDefault();
+    map.getCanvas().style.cursor = 'grabbing';
+  };
+  const onMove = (e: MouseEvent | TouchEvent) => {
+    const pt = 'touches' in e ? e.touches[0] : e;
+    if (!pt) return;
+    const [x, y] = local(pt.clientX, pt.clientY);
+    if (!dragging) {
+      if (!('touches' in e)) map.getCanvas().style.cursor = nearSun(x, y) ? 'grab' : '';
+      return;
+    }
+    e.preventDefault();
+    pending = { x, y, shift: e.shiftKey || dragging.shift };
+    if (!frame) frame = requestAnimationFrame(applyDrag);
+  };
+  const onUp = () => {
+    if (!dragging) return;
+    dragging = null;
+    map.getCanvas().style.cursor = '';
+  };
+
+  const outer = map.getContainer();
+  outer.addEventListener('mousedown', onDown, true);
+  outer.addEventListener('touchstart', onDown, { capture: true, passive: false });
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('mouseup', onUp);
+  window.addEventListener('touchend', onUp);
+
+  // Dev hook for checking the scene from the console.
+  if (import.meta.env.DEV) {
+    (window as unknown as { __scene: unknown }).__scene = { skyAt, getSunScreen: () => sunScreen, getRadius: () => radius };
+  }
+
+  return () => {
+    unsubscribe();
+    cancelAnimationFrame(frame);
+    map.off('resize', resize);
+    if (map.getLayer('sun-scene')) map.removeLayer('sun-scene');
+    canvas.remove();
+    outer.removeEventListener('mousedown', onDown, true);
+    outer.removeEventListener('touchstart', onDown, true);
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('touchmove', onMove);
+    window.removeEventListener('mouseup', onUp);
+    window.removeEventListener('touchend', onUp);
+  };
+}
+
+/** Flattens a direction onto the horizon (for sunrise/sunset badges on the ring). */
+function flat(v: Vec3): Vec3 {
+  const l = Math.hypot(v[0], v[1]) || 1;
+  return [v[0] / l, v[1] / l, 0];
+}
