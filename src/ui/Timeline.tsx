@@ -6,6 +6,7 @@ import { clipDuration, type Keyframe } from '../timeline/model';
 import { addKeyframeHere, frameAt, seek, stopPlayback, togglePlayback } from '../timeline/runtime';
 import { openProjectFile, saveProjectFile } from '../timeline/projectFile';
 import { useExport } from '../timeline/exportVideo';
+import { arrivingShape, EASY_EASE, leavingShape, type KeyShape } from '../timeline/eases';
 
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 
@@ -26,6 +27,28 @@ const Icon = ({ d, fill = false }: { d: string; fill?: boolean }) => (
   </svg>
 );
 
+// Keyframe icons like After Effects': the left half shows how the ease arrives, the right how it
+// leaves. Linear ◆, eased ⧓, hold ■.
+const HALVES: Record<KeyShape, [string, string]> = {
+  linear: ['M7 1L1 7L7 13Z', 'M7 1L13 7L7 13Z'],
+  eased: ['M1.5 2L7 7L1.5 12Z', 'M12.5 2L7 7L12.5 12Z'],
+  hold: ['M1.5 1.5H7V12.5H1.5Z', 'M7 1.5H12.5V12.5H7Z'],
+};
+const KeyIcon = ({ left, right }: { left: KeyShape; right: KeyShape }) => (
+  <svg className="tl-key-icon" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+    <path d={HALVES[left][0]} />
+    <path d={HALVES[right][1]} />
+  </svg>
+);
+
+/** Icon halves for keyframe i, from the eases around it (the sun's own, or the camera's). */
+function keyShapes(keys: Keyframe[], i: number, sun: boolean): { left: KeyShape; right: KeyShape } {
+  const easeOf = (k: Keyframe) => (sun ? (k.sunEasing ?? k.easing) : k.easing);
+  const right = i < keys.length - 1 ? leavingShape(easeOf(keys[i])) : null;
+  const left = i > 0 ? arrivingShape(easeOf(keys[i - 1])) : null;
+  return { left: left ?? right ?? 'linear', right: right ?? left ?? 'linear' };
+}
+
 /**
  * The keyframe timeline (like mockup B): transport, clip blocks, and tracks for the sun
  * time, camera and layers, with draggable keyframe diamonds and a playhead.
@@ -37,6 +60,7 @@ export function Timeline() {
   const playing = useTimeline((s) => s.playing);
   const loop = useTimeline((s) => s.loop);
   const selected = useTimeline((s) => s.selected);
+  const cleared = useTimeline((s) => s.cleared);
   const TL = useTimeline.getState();
   const clip = project.clips.find((c) => c.id === project.activeClip) ?? project.clips[0];
   const { timeZone } = useSun();
@@ -60,6 +84,13 @@ export function Timeline() {
   }, [open]);
   const exporting = useExport((s) => s.phase !== 'idle');
 
+  // Undo for Clear stays offered for 15 seconds.
+  useEffect(() => {
+    if (!cleared) return;
+    const id = setTimeout(() => useTimeline.setState({ cleared: null }), 15000);
+    return () => clearTimeout(id);
+  }, [cleared]);
+
   const duration = clipDuration(clip);
   const span = Math.max(10, Math.ceil(duration * 1.15 + 2));
   const step = rulerStep(span);
@@ -70,8 +101,14 @@ export function Timeline() {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (isTyping(e.target) || e.metaKey || e.ctrlKey) return;
+      if (isTyping(e.target)) return;
       const s = useTimeline.getState();
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && s.cleared) {
+        e.preventDefault();
+        s.undoClear();
+        return;
+      }
+      if (e.metaKey || e.ctrlKey) return;
       let handled = true;
       if (e.key === ' ') togglePlayback();
       else if (e.key.toLowerCase() === 'k') addKeyframeHere();
@@ -170,11 +207,20 @@ export function Timeline() {
         <button
           className="chip chip-small"
           disabled={!boundary || !keys.some((k) => k.t < playhead - 0.05) || !keys.some((k) => k.t > playhead + 0.05)}
-          onClick={() => boundary && TL.splitClip({ id: '', t: playhead, sun: boundary.sun, camera: boundary.camera, easing: keys[boundary.segment]?.easing ?? 'ease', sunMode: keys[boundary.segment]?.sunMode ?? 'continuous', loops: 0 })}
+          onClick={() => boundary && TL.splitClip({ id: '', t: playhead, sun: boundary.sun, camera: boundary.camera, easing: keys[boundary.segment]?.easing ?? [...EASY_EASE], sunEasing: keys[boundary.segment]?.sunEasing, sunMode: keys[boundary.segment]?.sunMode ?? 'continuous', loops: 0 })}
           title="Cut this clip in two at the playhead"
         >
           Split clip
         </button>
+        {cleared ? (
+          <button className="chip chip-small chip-primary" onClick={TL.undoClear} title="Bring the keyframes back (Cmd/Ctrl+Z)">
+            Undo clear ({cleared.keyframes.length})
+          </button>
+        ) : (
+          <button className="chip chip-small" disabled={!keys.length} onClick={TL.clearKeyframes} title="Remove every keyframe in this clip (you can undo)">
+            Clear keys
+          </button>
+        )}
         <label className="tl-check" title="Curve the camera smoothly through the keyframes">
           <input type="checkbox" checked={clip.smoothCamera} onChange={(e) => TL.setSmooth(e.target.checked)} />
           Smooth camera
@@ -222,24 +268,29 @@ export function Timeline() {
           </div>
           <div className="tl-row">
             {keys.slice(0, -1).map((k, i) => (
-              <span key={k.id} className="tl-segment" data-mode={k.sunMode} data-easing={k.easing} style={{ left: pct(k.t), width: pct(keys[i + 1].t - k.t) }} />
+              <span key={k.id} className="tl-segment" data-mode={k.sunMode} data-hold={(k.sunEasing ?? k.easing) === 'hold' || undefined} style={{ left: pct(k.t), width: pct(keys[i + 1].t - k.t) }} />
             ))}
             {keys.map((k, i) => (
               <button key={k.id} className="tl-key" aria-pressed={k.id === selected} style={{ left: pct(k.t) }} onPointerDown={dragKey(k)} aria-label={`Keyframe ${i + 1} at ${timecode(k.t)}`}>
+                <KeyIcon {...keyShapes(keys, i, true)} />
                 <span className="tl-key-label">{sunLabel(k, i)}</span>
               </button>
             ))}
           </div>
           <div className="tl-row">
             {keys.map((k, i) => (
-              <button key={k.id} className="tl-key tl-key-cam" aria-pressed={k.id === selected} style={{ left: pct(k.t) }} onPointerDown={dragKey(k)} aria-label={`Camera keyframe ${i + 1}`} />
+              <button key={k.id} className="tl-key tl-key-cam" aria-pressed={k.id === selected} style={{ left: pct(k.t) }} onPointerDown={dragKey(k)} aria-label={`Camera keyframe ${i + 1}`}>
+                <KeyIcon {...keyShapes(keys, i, false)} />
+              </button>
             ))}
           </div>
           <div className="tl-row">
             {keys
               .filter((k) => k.layers)
               .map((k) => (
-                <button key={k.id} className="tl-key tl-key-layers" aria-pressed={k.id === selected} style={{ left: pct(k.t) }} onPointerDown={dragKey(k)} aria-label="Layer keyframe" />
+                <button key={k.id} className="tl-key tl-key-layers" aria-pressed={k.id === selected} style={{ left: pct(k.t) }} onPointerDown={dragKey(k)} aria-label="Layer keyframe">
+                  <KeyIcon left="hold" right="hold" />
+                </button>
               ))}
           </div>
           <div className="tl-playhead" style={{ left: pct(playhead) }} />

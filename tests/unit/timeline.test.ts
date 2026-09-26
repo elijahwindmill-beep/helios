@@ -10,7 +10,7 @@ const key = (t: number, sun: string, extra: Partial<Keyframe> = {}): Keyframe =>
   t,
   sun: Date.parse(sun),
   camera: cam,
-  easing: 'linear',
+  easing: [0, 0, 1, 1],
   sunMode: 'continuous',
   loops: 0,
   ...extra,
@@ -55,7 +55,7 @@ describe('timeline interpolation', () => {
   });
 
   it('ease and hold', () => {
-    const c = clip([key(0, '2026-09-26T08:00:00Z', { easing: 'ease' }), key(10, '2026-09-26T10:00:00Z', { easing: 'hold' }), key(20, '2026-09-26T12:00:00Z')]);
+    const c = clip([key(0, '2026-09-26T08:00:00Z', { easing: [1 / 3, 0, 2 / 3, 1] }), key(10, '2026-09-26T10:00:00Z', { easing: 'hold' }), key(20, '2026-09-26T12:00:00Z')]);
     const at = (t: number) => (evaluate(c, t, TZ)!.sun - Date.parse('2026-09-26T08:00:00Z')) / 3600000;
     expect(at(1)).toBeLessThan(0.2); // slow start
     expect(at(5)).toBeCloseTo(1, 5);
@@ -99,7 +99,7 @@ describe('project files', async () => {
   it('round trips, sorting keyframes and fixing unknown values', () => {
     const p = parseProjectFile(JSON.stringify(good));
     expect(p.project.clips[0].keyframes.map((k) => k.t)).toEqual([0, 5]);
-    expect(p.project.clips[0].keyframes[0].easing).toBe('ease');
+    expect(p.project.clips[0].keyframes[0].easing).toEqual([1 / 3, 0, 2 / 3, 1]);
   });
   it('says plainly what is wrong', () => {
     expect(() => parseProjectFile('{')).toThrow("isn't valid JSON");

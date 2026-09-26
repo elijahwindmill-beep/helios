@@ -13,7 +13,9 @@ import { invert, multiply, pixelRay, raySphere, toScreen, transform, type Mat4, 
 // a custom layer), so it moves with the 3D view exactly.
 //
 // The sky is a dome centred on the pin; a sun direction (azimuth, elevation) sits on it at
-// the dome radius. The radius follows the zoom so the ring keeps a steady size on screen.
+// the dome radius. The radius follows the zoom so the ring keeps a steady size on screen,
+// unless it's locked to a size in metres: then it behaves like an object in the landscape
+// (for camera moves), and the sun and labels scale with it.
 
 // Thin, light lines like Apple Weather's sun chart, with dark glass labels (the Frost HUD).
 const AMBER = '#F5A623';
@@ -22,6 +24,9 @@ const GLASS = 'rgba(24,29,35,0.72)';
 const HUD = '"Barlow Condensed", "Barlow", sans-serif';
 /** Soft dark shadow under thin light lines, so they read on snow and bright rock. */
 const LINE_SHADOW = 'rgba(8,12,18,0.45)';
+
+/** Tilt-shift blur at the top and bottom edges at full lens strength, CSS pixels. */
+const TILT_BLUR_PX = 4;
 
 /** Sun and its reach, in CSS pixels. */
 const SUN_HIT_PX = 28;
@@ -66,6 +71,9 @@ function pathRuns(dayStart: number, dayEnd: number, lat: number, lng: number): P
 // Where the sun was last drawn on screen (CSS px in the map), for the lens dirt glow.
 let lastSunScreen: [number, number] | null = null;
 export const getSunScreen = () => lastSunScreen;
+// The dome radius last drawn, metres: what "Lock size" freezes.
+let lastRadius: number | null = null;
+export const getSunSceneRadius = () => lastRadius;
 
 export function installSunScene(map: MlMap): () => void {
   const container = map.getCanvasContainer();
@@ -78,6 +86,11 @@ export function installSunScene(map: MlMap): () => void {
   let matrix: Mat4 | null = null;
   let localToClip: Float64Array | null = null;
   let radius = 1000;
+  let scale = 1;
+  let labelScale = 1;
+  /** A font string with its pixel size scaled for a locked scene. */
+  const font = (weight: number, px: number) => `${weight} ${Math.round(px * labelScale * 10) / 10}px ${HUD}`;
+  const tiltCanvas = document.createElement('canvas');
   let sunScreen: [number, number] | null = null;
   let paths: DayPaths | null = null;
   let yearStarts: { key: string; starts: number[] } | null = null;
@@ -149,11 +162,16 @@ export function installSunScene(map: MlMap): () => void {
     localToClip = multiply(matrix, toWorld);
     const m = localToClip;
 
-    // Ring size: steady on screen, about 30% of the smaller side.
+    // Ring size: steady on screen, about 30% of the smaller side, or locked in metres.
     const ringPx = Math.max(110, Math.min(240, 0.3 * Math.min(W, H)));
     const mpp = (2 * Math.PI * EARTH_RADIUS * Math.cos((pin.lat * Math.PI) / 180)) / (512 * 2 ** map.getZoom());
-    radius = ringPx * mpp;
+    radius = s.sunSceneSize ?? ringPx * mpp;
+    lastRadius = radius;
     const R = radius;
+    // Locked: the sun, lines and labels grow and shrink with the ring (labels less, to stay legible).
+    const zoomScale = s.sunSceneSize ? Math.min(3, Math.max(0.3, R / mpp / ringPx)) : 1;
+    scale = zoomScale;
+    labelScale = Math.min(1.5, Math.max(0.7, Math.sqrt(zoomScale)));
 
     const P = (v: Vec3) => transform(m, [v[0] * R, v[1] * R, v[2] * R]);
     const S = (v: Vec3) => toScreen(P(v), W, H);
@@ -226,7 +244,7 @@ export function installSunScene(map: MlMap): () => void {
           const q = S([Math.sin(a) * 1.1, Math.cos(a) * 1.1, 0]);
           if (q)
             label(cardinal ? 3 : 1, () =>
-              text(q, cardinal ?? String(deg), cardinal ? `600 14px ${HUD}` : `500 11px ${HUD}`, cardinal ? '#ffffff' : 'rgba(255,255,255,0.78)'),
+              text(q, cardinal ?? String(deg), cardinal ? font(600, 14) : font(500, 11), cardinal ? '#ffffff' : 'rgba(255,255,255,0.78)'),
             );
         }
       }
@@ -249,7 +267,7 @@ export function installSunScene(map: MlMap): () => void {
         ctx.restore();
         if (ref.apex) {
           const q = S(ref.apex.dir);
-          if (q) label(2, () => pill([q[0], q[1] - 14], ref.label, 'rgba(24,29,35,0.55)', '#ffffff', `500 12px ${HUD}`));
+          if (q) label(2, () => pill([q[0], q[1] - 14], ref.label, 'rgba(24,29,35,0.55)', '#ffffff', font(500, 12)));
         }
       }
     }
@@ -282,7 +300,7 @@ export function installSunScene(map: MlMap): () => void {
       for (const b of [dp.rise, dp.set]) {
         if (!b) continue;
         const q = S(b.dir);
-        if (q) label(8, () => pill(q, formatClock(b.t, tz), GLASS, '#ffd58a', `600 12px ${HUD}`));
+        if (q) label(8, () => pill(q, formatClock(b.t, tz), GLASS, '#ffd58a', font(600, 12)));
       }
 
       const sun = sunPosition(s.time, pin.lat, pin.lng);
@@ -309,29 +327,31 @@ export function installSunScene(map: MlMap): () => void {
       ctx.restore();
 
       const az = S([groundDir[0] * 1.02, groundDir[1] * 1.02, 0]);
-      if (az) label(6, () => pill(az, `${sun.azimuth.toFixed(1)}°`, GLASS, '#ffffff', `500 12px ${HUD}`));
+      if (az) label(6, () => pill(az, `${sun.azimuth.toFixed(1)}°`, GLASS, '#ffffff', font(500, 12)));
       if (aboveHorizon) {
         const el = S([dir[0] * 0.45, dir[1] * 0.45, dir[2] * 0.45]);
-        if (el) label(6, () => pill([el[0] + 30, el[1]], `△ ${sun.elevation.toFixed(1)}°`, GLASS, '#ffffff', `500 12px ${HUD}`));
+        if (el) label(6, () => pill([el[0] + 30, el[1]], `△ ${sun.elevation.toFixed(1)}°`, GLASS, '#ffffff', font(500, 12)));
         const q = S(dir);
         if (q) {
           sunScreen = q;
           // A white sun with a warm glow, like Apple Weather.
-          const glow = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], 40);
+          const glowR = 40 * scale;
+          const glow = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], glowR);
           glow.addColorStop(0, 'rgba(255,255,255,1)');
           glow.addColorStop(0.25, 'rgba(255,243,208,0.9)');
           glow.addColorStop(0.6, 'rgba(245,166,35,0.28)');
           glow.addColorStop(1, 'rgba(245,166,35,0)');
           ctx.fillStyle = glow;
           ctx.beginPath();
-          ctx.arc(q[0], q[1], 40, 0, 2 * Math.PI);
+          ctx.arc(q[0], q[1], glowR, 0, 2 * Math.PI);
           ctx.fill();
           ctx.beginPath();
-          ctx.arc(q[0], q[1], 8.5, 0, 2 * Math.PI);
+          ctx.arc(q[0], q[1], 8.5 * scale, 0, 2 * Math.PI);
           ctx.fillStyle = '#fffdf6';
           ctx.fill();
-          label(10, () => pill([q[0] + 44, q[1]], formatClock(s.time, tz), GLASS, '#ffffff', `600 14px ${HUD}`));
-          placed.push([q[0] - 14, q[1] - 14, q[0] + 14, q[1] + 14]); // the sun itself
+          label(10, () => pill([q[0] + 36 * labelScale + 8 * scale, q[1]], formatClock(s.time, tz), GLASS, '#ffffff', font(600, 14)));
+          const r = 14 * scale;
+          placed.push([q[0] - r, q[1] - r, q[0] + r, q[1] + r]); // the sun itself
         }
       }
     }
@@ -339,6 +359,46 @@ export function installSunScene(map: MlMap): () => void {
     labels.sort((a, b) => b.priority - a.priority);
     for (const l of labels) l.draw();
     lastSunScreen = sunScreen;
+
+    // Tilt-shift like the map's (scene/lens.ts): blurred toward the top and bottom, sharp in
+    // the middle band, so the scene sits at the same focal depth as the terrain under it.
+    const k = s.overlays.lens ? s.lensStrength : 0;
+    if (k > 0) tiltShift(k, dpr);
+  };
+
+  /** sharp × (1 − m) + blurred × m, with m the lens's tilt mask (smoothstep bands). */
+  const tiltShift = (k: number, dpr: number) => {
+    const w = canvas.width;
+    const h = canvas.height;
+    if (tiltCanvas.width !== w || tiltCanvas.height !== h) {
+      tiltCanvas.width = w;
+      tiltCanvas.height = h;
+    }
+    const t = tiltCanvas.getContext('2d')!;
+    const mask = (c: CanvasRenderingContext2D) => {
+      const g = c.createLinearGradient(0, 0, 0, h);
+      for (const [y, a] of [[0, 1], [0.09, 0.84], [0.18, 0.5], [0.27, 0.16], [0.36, 0], [0.64, 0], [0.73, 0.16], [0.82, 0.5], [0.91, 0.84], [1, 1]]) {
+        g.addColorStop(y, `rgba(0,0,0,${a * k})`);
+      }
+      return g;
+    };
+    t.setTransform(1, 0, 0, 1, 0, 0);
+    t.globalCompositeOperation = 'source-over';
+    t.clearRect(0, 0, w, h);
+    t.filter = `blur(${TILT_BLUR_PX * dpr}px)`;
+    t.drawImage(canvas, 0, 0);
+    t.filter = 'none';
+    t.globalCompositeOperation = 'destination-in';
+    t.fillStyle = mask(t);
+    t.fillRect(0, 0, w, h);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = mask(ctx);
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.drawImage(tiltCanvas, 0, 0);
+    ctx.restore();
   };
 
   // Screen boxes of labels drawn this frame: [x0, y0, x1, y1].
@@ -403,7 +463,7 @@ export function installSunScene(map: MlMap): () => void {
   map.addLayer(layer);
 
   const unsubscribe = useApp.subscribe((now, prev) => {
-    if (now.time !== prev.time || now.pin !== prev.pin || now.overlays !== prev.overlays) map.triggerRepaint();
+    if (now.time !== prev.time || now.pin !== prev.pin || now.overlays !== prev.overlays || now.sunSceneSize !== prev.sunSceneSize || now.lensStrength !== prev.lensStrength) map.triggerRepaint();
   });
 
   // ---- Dragging the sun ----
@@ -416,7 +476,7 @@ export function installSunScene(map: MlMap): () => void {
     const r = canvas.getBoundingClientRect();
     return [clientX - r.left, clientY - r.top];
   };
-  const nearSun = (x: number, y: number) => !!sunScreen && Math.hypot(x - sunScreen[0], y - sunScreen[1]) < SUN_HIT_PX;
+  const nearSun = (x: number, y: number) => !!sunScreen && Math.hypot(x - sunScreen[0], y - sunScreen[1]) < SUN_HIT_PX * Math.max(1, scale);
 
   /** Sky direction under a canvas pixel: where the pointer ray meets the dome. */
   const skyAt = (x: number, y: number): SkyDirection | null => {

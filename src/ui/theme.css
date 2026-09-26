@@ -1343,6 +1343,31 @@ input.sun-date {
   display: none;
 }
 
+/* ---------- Sun scene size lock (layer panel) ---------- */
+.sun-size {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 2px 0 10px;
+}
+.sun-size .segmented {
+  flex: 1;
+  margin: 0;
+}
+.sun-size .hud-label {
+  width: 100%;
+}
+input.sun-size-input {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--hairline);
+  border-radius: 7px;
+  background: var(--surface-sunk);
+  font-size: 14px;
+}
+
 /* ---------- Settings (foot of the layer panel) ---------- */
 .settings {
   margin-top: 14px;
@@ -2674,41 +2699,52 @@ input.top-time {
   background: repeating-linear-gradient(90deg, var(--accent) 0 5px, transparent 5px 9px);
   opacity: 0.8;
 }
-.tl-segment[data-easing='hold'] {
+.tl-segment[data-hold] {
   background: var(--muted);
 }
 .tl-key {
   position: absolute;
   top: 50%;
-  width: 12px;
-  height: 12px;
-  margin: -6px 0 0 -6px;
-  padding: 0;
-  border: 1.5px solid #f4f6f8;
-  background: var(--accent);
-  transform: rotate(45deg);
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  padding: 1px;
+  border: 0;
+  background: none;
+  color: var(--accent);
   cursor: grab;
   z-index: 1;
 }
+.tl-key-icon {
+  display: block;
+}
+.tl-key-icon path {
+  fill: currentColor;
+  stroke: #f4f6f8;
+  stroke-width: 1.1;
+  stroke-linejoin: round;
+}
 .tl-key[aria-pressed='true'] {
-  background: #ff6b4a;
-  box-shadow: 0 0 0 3px rgba(255, 107, 74, 0.35);
+  color: #ff6b4a;
+  filter: drop-shadow(0 0 4px rgba(255, 107, 74, 0.7));
 }
 .tl-key-cam {
-  background: #5b8def;
+  color: #5b8def;
 }
 .tl-key-layers {
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  color: #9fb4c6;
+}
+.tl-key-layers .tl-key-icon {
   width: 10px;
   height: 10px;
-  margin: -5px 0 0 -5px;
-  background: #9fb4c6;
 }
 .tl-key-label {
   position: absolute;
-  left: 12px;
-  top: -14px;
-  transform: rotate(-45deg);
-  transform-origin: left top;
+  left: 14px;
+  top: -12px;
   font-family: var(--font-hud);
   font-size: 11px;
   font-weight: 600;
@@ -2792,7 +2828,7 @@ input.top-time {
   position: absolute;
   top: 92px;
   right: 20px;
-  width: 300px;
+  width: 316px;
   max-height: calc(100% - 92px - var(--tl-h, 230px) - 36px);
   overflow-y: auto;
   padding: 12px 14px;
@@ -2871,6 +2907,136 @@ input.insp-at {
 .insp-delete {
   margin-left: auto;
   color: var(--warn);
+}
+.insp-ease-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.insp-ease-tools {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+.insp-ease-tools .chip {
+  padding: 0 8px;
+}
+.insp-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 2px 0 6px;
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.insp-check input {
+  accent-color: var(--track-on);
+}
+
+/* ---------- Ease editor (curve, speed graph, presets) ---------- */
+.ease-editor {
+  margin-top: 6px;
+}
+.ease-graph {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  touch-action: none;
+  border-radius: 8px;
+  background: var(--surface-sunk);
+}
+.ease-box {
+  fill: none;
+  stroke: var(--hairline);
+}
+.ease-grid,
+.ease-divider {
+  stroke: var(--hairline-soft);
+}
+.ease-curve {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.ease-arm {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+.ease-handle {
+  cursor: grab;
+}
+.ease-handle circle:last-child {
+  fill: var(--surface-solid);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+.ease-handle:hover circle:last-child {
+  fill: var(--accent);
+}
+.ease-end {
+  fill: var(--ink);
+}
+.ease-speed {
+  fill: rgba(91, 141, 239, 0.25);
+  stroke: #5b8def;
+  stroke-width: 1.2;
+}
+.ease-axis {
+  font-family: var(--font-hud);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  fill: var(--muted);
+}
+.ease-readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin: 6px 0 4px;
+  font-size: 11px;
+}
+.ease-name {
+  font-family: var(--font-hud);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.inspector .typed.ease-numbers {
+  font-size: 13px;
+}
+.ease-groups {
+  margin-top: 8px !important;
+}
+.ease-presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+  gap: 4px;
+  margin-top: 6px;
+}
+.ease-preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 2px 3px;
+  border: 1px solid var(--hairline-soft);
+  border-radius: 7px;
+  background: none;
+  color: var(--ink-2);
+  font-size: 10.5px;
+}
+.ease-preset:hover {
+  background: var(--surface-sunk);
+}
+.ease-preset[aria-pressed='true'] {
+  border-color: var(--accent-line);
+  background: rgba(245, 166, 35, 0.14);
+  color: var(--ink);
 }
 
 /* ---------- Export ---------- */

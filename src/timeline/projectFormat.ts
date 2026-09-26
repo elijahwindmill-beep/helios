@@ -1,5 +1,6 @@
 import type { Photo, Place, Route } from '../layers/model';
 import type { Project } from './model';
+import { readEasing } from './eases';
 
 /** A saved project: clips and keyframes, your layers (photos without their full files), and settings. */
 export interface ProjectFile {
@@ -12,6 +13,8 @@ export interface ProjectFile {
     overlays: Record<string, boolean>;
     imagery: string;
     lensStrength: number;
+    /** Locked sun scene radius, metres (null or absent: follows zoom). */
+    sunSceneSize?: number | null;
     pin: { lat: number; lng: number; name: string };
   };
 }
@@ -45,7 +48,8 @@ export function parseProjectFile(text: string): ProjectFile {
       keyframes: [...c.keyframes]
         .map((k) => ({
           ...k,
-          easing: (['linear', 'ease', 'hold'] as const).includes(k.easing) ? k.easing : 'ease',
+          easing: readEasing(k.easing),
+          sunEasing: k.sunEasing === undefined ? undefined : readEasing(k.sunEasing),
           sunMode: k.sunMode === 'daylapse' ? ('daylapse' as const) : ('continuous' as const),
           loops: Math.max(0, Math.round(Number(k.loops) || 0)),
         }))

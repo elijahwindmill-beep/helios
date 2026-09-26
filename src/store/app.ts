@@ -45,6 +45,8 @@ interface AppState {
   googleKey: string;
   /** 0–1, how strong the lens look is when it's on. */
   lensStrength: number;
+  /** Sun scene (ring, paths, sun) radius in metres when locked; null = keeps a steady size on screen. */
+  sunSceneSize: number | null;
   /** Which groups of controls are shown; hiding them all gives a clear map. Not saved. */
   hud: Hud;
   /** Loading state of the shadow layer, for the UI. */
@@ -70,6 +72,7 @@ interface AppState {
   setElevation(id: ElevationId): void;
   setGoogleKey(key: string): void;
   setLensStrength(v: number): void;
+  setSunSceneSize(metres: number | null): void;
   setHud(patch: Partial<Hud>): void;
   /** Sets several layer switches at once (timeline keyframes). */
   setOverlays(patch: Partial<Overlays>): void;
@@ -115,6 +118,7 @@ export const useApp = create<AppState>()(
       elevation: 'mapterhorn',
       googleKey: import.meta.env.VITE_GOOGLE_MAPS_KEY ?? '',
       lensStrength: 1,
+      sunSceneSize: null,
       hud: { left: true, right: true, top: true, bottom: true },
       shadowStatus: { state: 'idle' },
       layersOpen: false,
@@ -135,6 +139,7 @@ export const useApp = create<AppState>()(
       setElevation: (elevation) => set({ elevation }),
       setGoogleKey: (googleKey) => set({ googleKey }),
       setLensStrength: (lensStrength) => set({ lensStrength: Math.min(1, Math.max(0, lensStrength)) }),
+      setSunSceneSize: (m) => set({ sunSceneSize: m === null ? null : Math.min(50000, Math.max(20, m)) }),
       setHud: (patch) => set((s) => ({ hud: { ...s.hud, ...patch } })),
       setOverlays: (patch) =>
         set((s) => (Object.entries(patch).every(([k, v]) => s.overlays[k as keyof Overlays] === v) ? {} : { overlays: { ...s.overlays, ...patch } })),
@@ -165,6 +170,7 @@ export const useApp = create<AppState>()(
         elevation: s.elevation,
         googleKey: s.googleKey,
         lensStrength: s.lensStrength,
+        sunSceneSize: s.sunSceneSize,
         tutorialSeen: s.tutorialSeen,
       }),
       // Overlays saved by an older version lack newer keys; fill them with defaults.

@@ -4,7 +4,15 @@
  * (optionally) which layers are on, plus how to get to the next keyframe.
  */
 
-export type Easing = 'linear' | 'ease' | 'hold';
+/**
+ * A cubic Bézier ease, like CSS cubic-bezier() or a curve from After Effects' graph editor:
+ * (x1, y1) is the handle leaving this keyframe, (x2, y2) the one arriving at the next.
+ * x is a share of the time (0–1); y a share of the way, and may overshoot (Back).
+ */
+export type Bezier = [number, number, number, number];
+
+/** How to get to the next keyframe: along a curve, or hold until it (a cut). */
+export type Easing = Bezier | 'hold';
 
 /**
  * How the sun moves from this keyframe to the next:
@@ -28,8 +36,10 @@ export interface Keyframe {
   /** Sun moment, UTC ms. */
   sun: number;
   camera: CameraKey;
-  /** Easing to the next keyframe. */
+  /** Ease to the next keyframe (the camera's, and the sun's unless it has its own). */
   easing: Easing;
+  /** The sun's own ease to the next keyframe, e.g. a steady time-lapse under an eased camera move. */
+  sunEasing?: Easing;
   sunMode: SunMode;
   /** Day lapse only: how many times the time of day sweeps from this keyframe's to the next's; 0 holds or glides once. */
   loops: number;

@@ -100,6 +100,8 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 
 ### Sun in 3D
 
+- **Sun scene size** (layer panel): **Follows zoom** keeps the ring a steady size on screen; **Locked** fixes the ring, paths and sun at their size on the ground (you can type it, e.g. `800 m` or `1.2 km`), so a camera move shows them in perspective like an object in the landscape, with the sun and labels scaling along. Saved in projects.
+- With the lens look on, the sun scene gets the same tilt-shift blur toward the top and bottom as the map, so it sits at the terrain's focal depth (also in exported video).
 - Around the pin: a **compass ring** (ticks every 10°, N/E/S/W), today's **sun path** in amber with sunrise and sunset badges where it meets the horizon, the **solstice** paths (dashed) and the **equinox** path (dotted). Each has its own switch in the layer panel.
 - The **sun** sits on its path with a line down to the pin, its elevation (△) and its azimuth on the ring.
 - **Drag the sun** along its path to change the time. Hold **Shift** while dragging to move it anywhere in the sky: Helios finds the date and time when the sun is there. A plain drag never changes the date, however far you pull it.
@@ -119,7 +121,15 @@ In the layer panel under **Your layers** (on a phone: the Layers button), or fro
 ### Timeline and video (phase 5)
 
 - **Timeline** (tool dock, or the diamond button on a phone): set the view and sun, press **◇ Add keyframe** (K), move the playhead, change the view and sun, add another. Space plays, arrows step (Shift: tenths), Delete removes the selected keyframe. Drag diamonds to move them (snaps to seconds; Alt for tenths).
-- **Inspector** (right, when a keyframe is selected): sun time and date, **Continuous** (glide the exact moment: day sweeps, year lapses) or **Day lapse** (the date steps day by day, the time holds or sweeps N times), camera numbers, easing (Linear, Ease, Hold), layer switches, Set from view, Delete.
+- **Inspector** (right, when a keyframe is selected): sun time and date, **Continuous** (glide the exact moment: day sweeps, year lapses) or **Day lapse** (the date steps day by day, the time holds or sweeps N times), camera numbers, the ease to the next keyframe, layer switches, Set from view, Delete.
+- **Ease to next** works like After Effects' graph editor with AE Juice / Flow style presets:
+  - A curve with two handles to drag (hold Shift to keep a handle flat, so the move starts or stops dead), and the **speed graph** under it showing the velocity. The line under the graph gives each end's speed (0× = standing start, 1× = steady) and influence, as in AE's keyframe velocity.
+  - Presets in **In** (starts slow), **Out** (arrives slowly) and **In-Out**: Easy (AE's Easy Ease), Sine, Quad, Cubic, Quart, Quint, Expo, Circ and Back (overshoots), plus Linear and Hold.
+  - Type the four numbers directly (`0.33, 0, 0.67, 1` or `cubic-bezier(...)`).
+  - **Copy** / **Paste** an ease between keyframes, **To all** puts it on every keyframe of the clip.
+  - **Sun has its own ease**: separate curves for the camera and the sun, e.g. a steady time-lapse under an eased camera move.
+  - Keyframes on the timeline show their eases like AE's icons: linear ◆, eased ⧓, hold ■ (the left half is how the ease arrives, the right half how it leaves).
+- **Clear keys** removes every keyframe in the clip; **Undo clear** (or Cmd/Ctrl+Z) brings them back for 15 seconds.
 - Several clips per project; **Split clip** cuts at the playhead. Everything autosaves in the browser; **Save project** / **Open…** use a .json file.
 - **Export video**: MP4 (H.264), 720p / 1080p / 4K, 24 / 30 / 60 fps. Frames are rendered one at a time, each waiting for the map and shadows, so the video is smooth on any computer (it takes longer than the clip). Uses the browser's WebCodecs encoder with Mediabunny (MPL-2.0) instead of the brief's WebM MediaRecorder, because it gives exact frame timing and a file Resolve opens directly. Pins and photo markers aren't in the video.
 

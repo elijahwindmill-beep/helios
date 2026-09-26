@@ -10,6 +10,8 @@ import { useSunHours } from '../store/sunHours';
 import { HOURS_STOPS } from '../terrain/sunHours';
 import { Logo } from './Logo';
 import { Settings } from './Settings';
+import { getSunSceneRadius } from '../scene/sunScene';
+import { TypedField } from './timeControls';
 
 const BASES: Array<{ id: BaseLayer; label: string }> = [
   { id: 'satellite', label: 'Satellite' },
@@ -42,6 +44,7 @@ export function LayerPanel() {
   const imagery = useApp((s) => s.imagery);
   const maptilerKey = useApp((s) => s.maptilerKey);
   const lensStrength = useApp((s) => s.lensStrength);
+  const sunSceneSize = useApp((s) => s.sunSceneSize);
   const spotStatus = useSpots((s) => s.status);
   const hours = useSunHours();
   const status = useApp((s) => s.shadowStatus);
@@ -148,6 +151,40 @@ export function LayerPanel() {
           {spotStatus === 'busy' && 'Wikimedia Commons is busy right now; photo spots will load when you next move the map.'}
           {spotStatus === 'error' && 'Photo spots unavailable right now.'}
         </p>
+      )}
+
+      {(overlays.sunPath || overlays.compass || overlays.solstices) && (
+        <div className="sun-size">
+          <span className="hud-label">Sun scene size</span>
+          <div className="segmented segmented-small" role="group" aria-label="Sun scene size">
+            <button aria-pressed={sunSceneSize === null} onClick={() => useApp.getState().setSunSceneSize(null)} title="Keep a steady size on screen at any zoom">
+              Follows zoom
+            </button>
+            <button
+              aria-pressed={sunSceneSize !== null}
+              onClick={() => useApp.getState().setSunSceneSize(Math.round(getSunSceneRadius() ?? 1000))}
+              title="Fix the ring, paths and sun at their current size on the ground, so camera moves show them in perspective"
+            >
+              Locked
+            </button>
+          </div>
+          {sunSceneSize !== null && (
+            <TypedField
+              className="sun-size-input mono"
+              label="Sun scene radius"
+              hint="Ring radius on the ground, e.g. 800 m or 1.2 km"
+              value={sunSceneSize >= 1000 ? `${(sunSceneSize / 1000).toFixed(2)} km` : `${Math.round(sunSceneSize)} m`}
+              apply={(t) => {
+                const m = /^\s*([\d.,]+)\s*(km|m)?\s*$/i.exec(t);
+                if (!m) return false;
+                const v = Number(m[1].replace(',', '.')) * (m[2]?.toLowerCase() === 'km' ? 1000 : 1);
+                if (!Number.isFinite(v) || v <= 0) return false;
+                useApp.getState().setSunSceneSize(v);
+                return true;
+              }}
+            />
+          )}
+        </div>
       )}
 
       {overlays.lens && (

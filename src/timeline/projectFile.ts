@@ -15,7 +15,7 @@ export function saveProjectFile() {
     savedAt: new Date().toISOString(),
     project: tl.project,
     layers: { routes: layers.routes, places: layers.places, photos: layers.photos },
-    settings: { base: app.base, overlays: { ...app.overlays }, imagery: app.imagery, lensStrength: app.lensStrength, pin: app.pin },
+    settings: { base: app.base, overlays: { ...app.overlays }, imagery: app.imagery, lensStrength: app.lensStrength, sunSceneSize: app.sunSceneSize, pin: app.pin },
   };
   const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -46,6 +46,7 @@ export function openProjectFile(): Promise<void> {
           if (p.settings.imagery) app.setImagery(p.settings.imagery as ImageryId);
           if (p.settings.overlays) app.setOverlays(p.settings.overlays as Partial<Overlays>);
           if (typeof p.settings.lensStrength === 'number') app.setLensStrength(p.settings.lensStrength);
+          if (p.settings.sunSceneSize === null || typeof p.settings.sunSceneSize === 'number') app.setSunSceneSize(p.settings.sunSceneSize);
           if (p.settings.pin) app.setPin(p.settings.pin);
         }
         useLayers.getState().setNotice(`Opened ${file.name}${p.layers.photos.length ? ' (photos show as thumbnails: their full files stay on the computer that added them)' : ''}`);

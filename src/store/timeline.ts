@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { clipDuration, newId, sortKeys, type Clip, type Keyframe, type Project } from '../timeline/model';
+import { clipDuration, newId, sortKeys, type Clip, type Easing, type Keyframe, type Project } from '../timeline/model';
+import { readEasing } from '../timeline/eases';
 
 const firstClip = (): Clip => ({ id: newId(), name: 'Clip 1', keyframes: [], smoothCamera: true });
 
@@ -14,6 +15,10 @@ interface TimelineState {
   loop: boolean;
   /** Keyframe shown in the inspector. */
   selected: string | null;
+  /** An ease copied with Copy ease, for Paste ease. */
+  easeClipboard: Easing | null;
+  /** The keyframes a Clear removed, until Undo or the next edit. */
+  cleared: { clipId: string; keyframes: Keyframe[] } | null;
 
   setOpen(open: boolean): void;
   setPlayhead(t: number): void;
@@ -34,6 +39,12 @@ interface TimelineState {
   addKeyframe(k: Omit<Keyframe, 'id'>): string;
   updateKeyframe(id: string, patch: Partial<Omit<Keyframe, 'id'>>): void;
   deleteKeyframe(id: string): void;
+  /** Removes every keyframe of the active clip (Undo brings them back). */
+  clearKeyframes(): void;
+  undoClear(): void;
+  copyEase(e: Easing): void;
+  /** Sets the camera ease (or the sun's) on every keyframe of the active clip. */
+  easeAll(e: Easing, which: 'camera' | 'sun'): void;
 
   replaceProject(p: Project): void;
 }
@@ -52,6 +63,8 @@ export const useTimeline = create<TimelineState>()(
         playing: false,
         loop: false,
         selected: null,
+        easeClipboard: null,
+        cleared: null,
 
         setOpen: (open) => set({ open, playing: open ? get().playing : false }),
         setPlayhead: (t) => set({ playhead: Math.max(0, t) }),
@@ -99,7 +112,7 @@ export const useTimeline = create<TimelineState>()(
         addKeyframe: (k) => {
           const id = newId();
           editActive((c) => ({ ...c, keyframes: sortKeys([...c.keyframes.filter((x) => Math.abs(x.t - k.t) >= 0.1), { ...k, id }]) }));
-          set({ selected: id });
+          set({ selected: id, cleared: null });
           return id;
         },
         updateKeyframe: (id, patch) => editActive((c) => ({ ...c, keyframes: sortKeys(c.keyframes.map((k) => (k.id === id ? { ...k, ...patch } : k))) })),
@@ -107,14 +120,39 @@ export const useTimeline = create<TimelineState>()(
           editActive((c) => ({ ...c, keyframes: c.keyframes.filter((k) => k.id !== id) }));
           if (get().selected === id) set({ selected: null });
         },
+        clearKeyframes: () => {
+          const clip = get().activeClip();
+          if (!clip.keyframes.length) return;
+          set({ cleared: { clipId: clip.id, keyframes: clip.keyframes }, selected: null, playing: false, playhead: 0 });
+          editActive((c) => ({ ...c, keyframes: [] }));
+        },
+        undoClear: () => {
+          const c = get().cleared;
+          if (!c) return;
+          set((s) => ({ project: updateClip(s.project, c.clipId, (clip) => ({ ...clip, keyframes: c.keyframes })), cleared: null }));
+        },
+        copyEase: (easeClipboard) => set({ easeClipboard }),
+        easeAll: (e, which) =>
+          editActive((c) => ({
+            ...c,
+            keyframes: c.keyframes.map((k) => (which === 'camera' ? { ...k, easing: e } : { ...k, sunEasing: e })),
+          })),
 
         replaceProject: (project) => set({ project, playhead: 0, selected: null, playing: false }),
       };
     },
     {
       name: 'helios.project',
-      version: 1,
+      version: 2,
       partialize: (s) => ({ project: s.project, loop: s.loop }),
+      // v2: eases became Bézier curves ('linear' and 'ease' before).
+      migrate: (state) => {
+        const s = state as { project?: Project };
+        for (const c of s.project?.clips ?? []) {
+          c.keyframes = c.keyframes.map((k) => ({ ...k, easing: readEasing(k.easing), sunEasing: k.sunEasing === undefined ? undefined : readEasing(k.sunEasing) }));
+        }
+        return s as TimelineState;
+      },
     },
   ),
 );

@@ -5,6 +5,7 @@ import { timeZoneAt } from '../sun/timezone';
 import type { Overlays } from '../map/style';
 import { clipDuration, type CameraKey, type Keyframe } from './model';
 import { evaluate, type Frame } from './interpolate';
+import { EASY_EASE } from './eases';
 
 /** The current view and sun, as a keyframe's content. */
 export function captureNow(): Pick<Keyframe, 'sun' | 'camera'> {
@@ -91,7 +92,8 @@ export function addKeyframeHere() {
   tl.addKeyframe({
     t: Math.round(tl.playhead * 10) / 10,
     ...captureNow(),
-    easing: prev?.easing ?? 'ease',
+    easing: prev?.easing ?? [...EASY_EASE],
+    sunEasing: prev?.sunEasing,
     sunMode: prev?.sunMode ?? 'continuous',
     loops: 0,
   });

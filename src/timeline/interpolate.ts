@@ -1,17 +1,13 @@
 import { zonedParts, zonedToUtc } from '../sun/timezone';
-import type { CameraKey, Clip, Easing, Keyframe } from './model';
+import type { CameraKey, Clip, Keyframe } from './model';
+import { ease } from './eases';
+
+export { ease };
 
 // Everything here is a pure function of (clip, playback time): the same frame every time,
 // which the video export relies on.
 
 const DAY = 86400000;
-
-export function ease(u: number, easing: Easing): number {
-  const x = Math.min(1, Math.max(0, u));
-  if (easing === 'hold') return 0;
-  if (easing === 'ease') return x * x * (3 - 2 * x);
-  return x;
-}
 
 /** Web Mercator, 0..1 across and down. */
 export function toMercator(lng: number, lat: number): [number, number] {
@@ -113,8 +109,9 @@ export function evaluate(clip: Clip, t: number, timeZone: string): Frame | null 
   while (keys[i + 1].t <= t) i++;
   const k0 = keys[i];
   const k1 = keys[i + 1];
-  const e = ease((t - k0.t) / (k1.t - k0.t), k0.easing);
-  const sun = sunBetween(k0, k1, e, timeZone);
+  const u = (t - k0.t) / (k1.t - k0.t);
+  const e = ease(u, k0.easing);
+  const sun = sunBetween(k0, k1, k0.sunEasing ? ease(u, k0.sunEasing) : e, timeZone);
 
   const v = cameraVecs(keys);
   let cam: Vec;
