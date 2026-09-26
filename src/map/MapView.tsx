@@ -12,6 +12,7 @@ import { readCamera } from './camera';
 import { setMap } from './mapInstance';
 import { installShadowLayer } from './shadowLayer';
 import { writeTimeToUrl } from '../store/urlTime';
+import { COMPACT_QUERY } from '../ui/useMedia';
 
 // MapLibre 6 looks for its worker next to its own bundle, which Vite moves. The
 // helios-maplibre-worker plugin in vite.config.ts serves the original files here instead.
@@ -103,7 +104,7 @@ export function MapView() {
     // does after the first drag.
     // It re-opens as sources load, so keep collapsing it until the viewer opens it themselves.
     const collapseAttribution = () => {
-      if (!window.matchMedia('(max-width: 760px)').matches) return;
+      if (!window.matchMedia(COMPACT_QUERY).matches) return;
       map.getContainer().querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
     };
     map.on('idle', collapseAttribution);

@@ -597,6 +597,13 @@ button {
   color: var(--ink);
 }
 
+.sun-expand {
+  flex-shrink: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
 /* ---------- Sun arc scrubber (bottom centre) ---------- */
 .sun-arc {
   position: absolute;
@@ -850,11 +857,6 @@ button {
   .sun-clock {
     font-size: 24px;
   }
-  .sun-expand {
-    border: 0;
-    box-shadow: none;
-    background: transparent;
-  }
   .sun-summary {
     margin: -4px 0 0;
     font-size: 12px;
@@ -933,6 +935,114 @@ button {
   }
   .tutorial-inner {
     padding: 20px;
+  }
+}
+
+/* ---------- Phones on their side (short, wide screens) ----------
+   Comes after the portrait block so it wins on small phones too (e.g. 667 x 375).
+   Search top-left, sun summary top-right, a small arc bottom-centre, layers slide in from the left. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .app {
+    --gutter: 12px;
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+  }
+  .narrow-only {
+    display: flex !important;
+  }
+  .wide-only,
+  .readout-floating {
+    display: none !important;
+  }
+  .search {
+    left: calc(var(--gutter) + var(--safe-left));
+    right: auto;
+    top: 8px;
+    width: min(340px, 40vw);
+  }
+  .search-box {
+    height: 44px;
+  }
+  .sun-card {
+    left: auto;
+    right: calc(var(--gutter) + var(--safe-right));
+    top: 8px;
+    width: min(320px, 42vw);
+    max-height: calc(100dvh - 16px);
+    z-index: 3;
+  }
+  .sun-arc {
+    left: 50%;
+    right: auto;
+    bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+    width: min(300px, 38vw);
+    transform: translateX(-50%);
+    padding-top: 2px;
+  }
+  .map-buttons {
+    right: calc(var(--gutter) + var(--safe-right));
+    top: auto;
+    bottom: 10px;
+    transform: none;
+  }
+  .maplibregl-ctrl-bottom-right {
+    right: auto;
+    left: calc(4px + var(--safe-left));
+    bottom: 4px;
+  }
+  .layer-panel {
+    left: 0;
+    right: auto;
+    top: 0;
+    bottom: 0;
+    width: min(340px, 48vw);
+    max-height: none;
+    padding: 16px var(--gutter) 16px calc(var(--gutter) + var(--safe-left));
+    border-radius: 0 20px 20px 0;
+    border: 1px solid var(--hairline);
+    border-left: 0;
+    box-shadow: 8px 0 24px rgba(31, 29, 26, 0.18);
+    z-index: 5;
+    animation: sheet-in 180ms ease-out;
+  }
+  .layer-panel[hidden] {
+    display: none;
+  }
+  .sheet-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    box-shadow: none;
+  }
+  .tutorial {
+    max-height: calc(100dvh - 16px);
+  }
+  .tutorial-inner {
+    padding: 16px 20px;
+  }
+  .tutorial-steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .tutorial-steps li {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .tutorial-art {
+    flex: none;
+    max-height: 90px;
+  }
+  .tutorial-art svg {
+    height: 74px;
+  }
+  .tutorial-foot {
+    margin: 10px 0;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateX(-24px);
+    opacity: 0;
   }
 }
 
