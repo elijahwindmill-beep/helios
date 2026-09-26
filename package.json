@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@photostructure/tz-lookup": "11.7.0",
     "maplibre-contour": "0.1.1",
     "maplibre-gl": "6.11.2",
     "react": "19.3.0",
