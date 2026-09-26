@@ -49,10 +49,7 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
    - Desktop HUD: top bar (location, sun height, azimuth, sunrise, sunset, golden hour, daylight, air and wind, typed date and time), 9-day forecast strip, alerts (weather, golden hour, blue hour), tool dock (route, place, import), sun chart at the bottom.
    - Sun scene: hairline ring and paths, white sun with a warm glow, gradient day path, glass labels.
    - Lens look (switch and strength slider): soft chromatic aberration, tilt-shift, lens dirt lit by the sun, dust, frost in the corners, vignette, edge blur and film grain.
-6. **Photo spots** (next, requested 26 Sep 2026)
-   - A layer of geotagged photos from Wikimedia Commons around the view: each where the camera stood, with an arrow for the direction it faced when the file records it. Free, and most can be used in paid work with credit.
-   - Click one to see it, its author and licence, and jump to its date and time like your own photos.
-   - Flickr could follow later; its API needs Flickr's approval for commercial use.
+6. ~~**Photo spots**~~ Done 26 Sep 2026: geotagged Wikimedia Commons photos around the view (see "Photo spots" below). Flickr could follow later; its API needs Flickr's approval for commercial use.
 
 ## Using it
 
@@ -102,6 +99,13 @@ In the layer panel under **Your layers** (on a phone: the Layers button), or fro
 - **Places:** pins with a name and notes. **Place at pin** saves the sun pin's spot; the **+** next to a search result saves that result. Click a place on the map for its notes and **Move sun pin here**. Drag it to move it.
 - **Photos:** placed from the GPS in the photo. A photo without GPS starts at the sun pin; drag it into place. Click a photo to see it full size with when it was taken. **Sun when this was taken** moves the pin and the time to that photo, so you can compare the light. HEIC photos show full size in Safari; other browsers show them as a camera icon.
 - Routes, Places and Photos each have an on/off switch. Everything is kept in this browser (photos in its file storage, not uploaded anywhere).
+
+### Photo spots
+
+- **Photo spots (Wikimedia)** (layer panel, on by default): up to 50 geotagged photos from Wikimedia Commons within 10 km of the view centre, each as a small round thumbnail where the camera stood. Clusters show the popular viewpoints. They reload as you move the map.
+- Click one for the full photo, the photographer, its licence (linked) and a link to its page on Commons. **Sun when this was taken** moves the pin there and jumps to the date and time the photo records (date only: the time stays), so you can compare the real light with the model.
+- When the file page records which way the camera faced (few do), the viewer says so and a wedge on the map shows the view.
+- Commons' search is sometimes briefly overloaded; the panel says so and the spots load on the next map move.
 
 ### On a phone
 
@@ -158,6 +162,7 @@ Helios is made for monetised videos, so each source's commercial terms matter. T
 | [Mapzen Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) (Terrarium, AWS Open Data) | 3D terrain, contours, hillshade | Mixed open licences, [attribution required](https://github.com/tilezen/joerd/blob/master/docs/attribution.md) | Yes |
 | [OpenFreeMap](https://openfreemap.org) (OpenMapTiles schema) | Water, roads, lifts, names | © OpenStreetMap contributors (ODbL), © OpenMapTiles | Yes |
 | [Nominatim](https://operations.osmfoundation.org/policies/nominatim/) | Place search | ODbL data; max 1 request per second | Yes (light use) |
+| [Wikimedia Commons](https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia) | Photo spots | Each photo has its own free licence (mostly CC BY / BY-SA), shown and linked with the photo; credit the author when you reuse one | Yes, with credit (and share-alike where the licence says so) |
 | [MET Norway Locationforecast](https://api.met.no/) | Weather forecast at the pin | Data from The Norwegian Meteorological Institute, [CC BY 4.0](https://api.met.no/doc/License) | Yes, with attribution |
 | Esri World Imagery | Satellite (default) | Esri terms | **Check terms**: Esri limits use outside ArcGIS |
 | [EOX Sentinel-2 cloudless 2016](https://cloudless.eox.at) | Satellite (alternative) | Commercial use needs a paid EOX licence | **No**, not as-is |
@@ -182,7 +187,7 @@ src/
   sun/     sun position, sunrise and sunset, seasons, timezones, inverse solver for dragging
   terrain/ elevation tiles, height mosaic, shadow ray-march (CPU reference and GPU shader)
   weather/ MET Norway forecast: fetching, picking the slot for a time, warnings
-  layers/  your routes, places and photos: file import (GPX/KML/GeoJSON, EXIF), map drawing, photo storage
+  layers/  your routes, places and photos: file import (GPX/KML/GeoJSON, EXIF), map drawing, photo storage; Wikimedia Commons photo spots
   store/   app state (Zustand), saved in the browser
   ui/      HUD: top bar, forecast, alerts, sun chart, tool dock, panels, search, readout, lens overlay, theme
 tests/     unit tests

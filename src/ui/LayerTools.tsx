@@ -3,7 +3,8 @@ import { useApp } from '../store/app';
 import { useLayers } from '../store/layers';
 import { importFiles } from '../layers/importFiles';
 import { loadPhotoBlob } from '../layers/photoBlobs';
-import { formatClock, formatDate, timeZoneAt } from '../sun/timezone';
+import { formatClock, formatDate, timeZoneAt, zonedParts, zonedToUtc } from '../sun/timezone';
+import { useSpots } from '../store/spots';
 import { useTouchDevice } from './useMedia';
 
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
@@ -188,6 +189,83 @@ export function PhotoViewer() {
                 {photo.takenAt !== null ? 'Sun when this was taken' : 'Move sun pin here'}
               </button>
               <button className="chip chip-small" onClick={() => useLayers.getState().setOpenPhoto(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </dialog>
+  );
+}
+
+const COMPASS_NAMES = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** A Wikimedia Commons photo spot: the photo, who took it and its licence, and when. */
+export function SpotViewer() {
+  const spot = useSpots((s) => s.open);
+  const heading = useSpots((s) => s.openHeading);
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    if (spot && !d.open) d.showModal();
+    if (!spot && d.open) d.close();
+  }, [spot]);
+
+  const close = () => useSpots.getState().set({ open: null, openHeading: undefined });
+  const t = spot?.taken;
+  const when = t ? [t.day, MONTHS[t.month - 1], t.year].filter(Boolean).join(' ') + (t.hour !== null ? ` · ${String(t.hour).padStart(2, '0')}:${String(t.minute ?? 0).padStart(2, '0')}` : '') : 'Date not recorded';
+  const facing =
+    heading === undefined ? '' : heading === null ? 'Direction not recorded' : `Facing ${COMPASS_NAMES[Math.round(heading / 45) % 8]} (${Math.round(heading)}°), shown on the map`;
+
+  const goToMoment = () => {
+    if (!spot) return;
+    const app = useApp.getState();
+    const tz = timeZoneAt(spot.lat, spot.lng);
+    app.setPin({ lat: spot.lat, lng: spot.lng, name: spot.title });
+    if (t?.day) {
+      const now = zonedParts(app.time, tz);
+      app.setTime(zonedToUtc({ year: t.year, month: t.month, day: t.day, hour: t.hour ?? now.hour, minute: t.minute ?? now.minute }, tz));
+    }
+    close();
+  };
+
+  return (
+    <dialog ref={ref} className="panel photo-viewer" onClose={close}>
+      {spot && (
+        <>
+          <div className="photo-frame">
+            <img src={spot.large} alt={spot.title} referrerPolicy="no-referrer" />
+          </div>
+          <div className="photo-info">
+            <div>
+              <strong>{spot.title}</strong>
+              <p className="muted">
+                Photo: {spot.artist || 'unknown'} ·{' '}
+                {spot.licenseUrl ? (
+                  <a href={spot.licenseUrl} target="_blank" rel="noreferrer">
+                    {spot.license}
+                  </a>
+                ) : (
+                  spot.license
+                )}{' '}
+                ·{' '}
+                <a href={spot.page} target="_blank" rel="noreferrer">
+                  Wikimedia Commons
+                </a>
+              </p>
+              <p className="muted mono">
+                {when}
+                {facing && ` · ${facing}`}
+              </p>
+            </div>
+            <div className="photo-actions">
+              <button className="chip chip-small chip-primary" onClick={goToMoment}>
+                {t?.day ? 'Sun when this was taken' : 'Move sun pin here'}
+              </button>
+              <button className="chip chip-small" onClick={close}>
                 Close
               </button>
             </div>

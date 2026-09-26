@@ -5,6 +5,7 @@ import { CameraReadout } from './CameraReadout';
 import { useNarrow, useReadoutInPanel } from './useMedia';
 import { MyLayers } from './MyLayers';
 import { SearchBar } from './SearchBar';
+import { useSpots } from '../store/spots';
 
 const BASES: Array<{ id: BaseLayer; label: string }> = [
   { id: 'satellite', label: 'Satellite' },
@@ -17,6 +18,7 @@ const OVERLAYS: Array<{ id: keyof Overlays; label: string; swatch: string }> = [
   { id: 'routes', label: 'Routes', swatch: '#5B8DEF' },
   { id: 'places', label: 'Places', swatch: '#1F1D1A' },
   { id: 'photos', label: 'Photos', swatch: '#C98A0F' },
+  { id: 'photoSpots', label: 'Photo spots (Wikimedia)', swatch: '#9fc4ff' },
   { id: 'sunPath', label: 'Sun path', swatch: '#E8A317' },
   { id: 'solstices', label: 'Solstice paths', swatch: '#BDB6A5' },
   { id: 'compass', label: 'Compass ring', swatch: '#6B665C' },
@@ -41,6 +43,7 @@ export function LayerPanel() {
   const maptilerKey = useApp((s) => s.maptilerKey);
   const quality = useApp((s) => s.shadowQuality);
   const lensStrength = useApp((s) => s.lensStrength);
+  const spotStatus = useSpots((s) => s.status);
   const status = useApp((s) => s.shadowStatus);
   const { setBase, toggleOverlay, setImagery, setMaptilerKey, setAboutOpen, setShadowQuality } = useApp.getState();
   const provider = IMAGERY[imagery];
@@ -121,6 +124,14 @@ export function LayerPanel() {
           </li>
         ))}
       </ul>
+
+      {overlays.photoSpots && spotStatus !== 'idle' && (
+        <p className="spot-status" role="status">
+          {spotStatus === 'loading' && 'Finding photo spots on Wikimedia Commons…'}
+          {spotStatus === 'busy' && 'Wikimedia Commons is busy right now; photo spots will load when you next move the map.'}
+          {spotStatus === 'error' && 'Photo spots unavailable right now.'}
+        </p>
+      )}
 
       {overlays.lens && (
         <label className="lens-strength">

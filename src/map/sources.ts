@@ -96,6 +96,12 @@ export const DATA_SOURCES = [
     url: 'https://api.met.no/doc/License',
   },
   {
+    name: 'Wikimedia Commons',
+    use: 'Photo spots: geotagged photos around the view',
+    licence: 'Each photo has its own free licence (mostly CC BY / BY-SA, paid use allowed with credit), shown with the photo',
+    url: 'https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia',
+  },
+  {
     name: 'Nominatim (OpenStreetMap)',
     use: 'Place search',
     licence: 'ODbL data; usage policy of max 1 request per second, no bulk use',

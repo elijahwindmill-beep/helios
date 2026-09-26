@@ -65,6 +65,7 @@ const DEFAULT_OVERLAYS: Overlays = {
   places: true,
   photos: true,
   lens: true,
+  photoSpots: true,
 };
 
 export const useApp = create<AppState>()(

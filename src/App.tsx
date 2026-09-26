@@ -8,7 +8,7 @@ import { SunCard } from './ui/SunCard';
 import { SunChart } from './ui/SunChart';
 import { Tutorial } from './ui/Tutorial';
 import { WeatherWarning } from './ui/Weather';
-import { DrawBar, DropZone, LayerNotice, PhotoViewer } from './ui/LayerTools';
+import { DrawBar, DropZone, LayerNotice, PhotoViewer, SpotViewer } from './ui/LayerTools';
 import { TopBar } from './ui/TopBar';
 import { ForecastStrip } from './ui/ForecastStrip';
 import { Alerts } from './ui/Alerts';
@@ -45,6 +45,7 @@ export function App() {
       <DrawBar />
       <LayerNotice />
       <PhotoViewer />
+      <SpotViewer />
       <DropZone />
       <AboutDialog />
       <Tutorial />

@@ -2240,3 +2240,35 @@ input.top-time {
 .lens-strength .hud-label {
   white-space: nowrap;
 }
+
+/* ---------- Photo spots (Wikimedia Commons) ---------- */
+.spot-marker {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(159, 196, 255, 0.95);
+  background: #2a3038;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(8, 12, 18, 0.5);
+  transition: transform 120ms;
+}
+.spot-marker:hover {
+  transform: scale(1.5);
+  z-index: 2;
+}
+.spot-marker img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.spot-status {
+  margin: -6px 0 12px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.photo-info a {
+  color: var(--ink-2);
+}

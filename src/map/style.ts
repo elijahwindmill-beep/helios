@@ -29,6 +29,8 @@ export interface Overlays {
   photos: boolean;
   /** Lens look: soft aberration, tilt-shift, dirt, dust, grain, vignette (scene/lens.ts, ui/LensOverlay.tsx). */
   lens: boolean;
+  /** Wikimedia Commons photos around the view (layers/photoSpots.ts). */
+  photoSpots: boolean;
 }
 
 // Paper tokens from the brief / mockup A.
