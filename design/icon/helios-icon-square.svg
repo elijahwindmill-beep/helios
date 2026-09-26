@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a323c"/>
+      <stop offset="0.55" stop-color="#1a1f25"/>
+      <stop offset="1" stop-color="#121519"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="512" cy="318" r="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffb84a" stop-opacity="0.55"/>
+      <stop offset="0.35" stop-color="#f5a623" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#f5a623" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.04"/>
+    </linearGradient>
+  </defs>
+  <g transform="scale(1.2427) translate(-100 -100)">
+  <!-- macOS icon grid: 824 x 824 tile centred in 1024 -->
+  <rect x="100" y="100" width="824" height="824" fill="url(#bg)"/>
+  <rect x="100" y="100" width="824" height="824" fill="url(#glow)"/>
+  <!-- the mark: horizon through a cut stone, sun above (from src/ui/Logo.tsx) -->
+  <g transform="translate(512 560) scale(5.6) translate(-60 -38)" fill="none" stroke="#edf1f4" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 40H106"/>
+    <path d="M36 40L48 22H72L84 40L60 56Z"/>
+  </g>
+  <circle cx="512" cy="318" r="30" fill="#ffb84a"/>
+  <circle cx="512" cy="318" r="18" fill="#fff3d6"/>
+  </g>
+</svg>
