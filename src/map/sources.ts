@@ -90,6 +90,12 @@ export const DATA_SOURCES = [
     url: 'https://openfreemap.org',
   },
   {
+    name: 'MET Norway Locationforecast',
+    use: 'Weather forecast at the pin, about 9 days ahead',
+    licence: 'Data from The Norwegian Meteorological Institute, CC BY 4.0; free incl. commercial with attribution',
+    url: 'https://api.met.no/doc/License',
+  },
+  {
     name: 'Nominatim (OpenStreetMap)',
     use: 'Place search',
     licence: 'ODbL data; usage policy of max 1 request per second, no bulk use',

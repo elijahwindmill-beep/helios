@@ -7,6 +7,7 @@ import { AboutDialog } from './ui/AboutDialog';
 import { SunCard } from './ui/SunCard';
 import { SunArc } from './ui/SunArc';
 import { Tutorial } from './ui/Tutorial';
+import { WeatherWarning } from './ui/Weather';
 
 export function App() {
   return (
@@ -14,6 +15,7 @@ export function App() {
       <MapView />
       <LayerPanel />
       <SearchBar />
+      <WeatherWarning />
       <SunCard />
       <SunArc />
       <MapButtons />

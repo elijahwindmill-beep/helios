@@ -489,6 +489,97 @@ input.sun-date {
   color: var(--muted);
   white-space: nowrap;
 }
+.weather-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  min-width: 0;
+}
+.weather-row > svg {
+  flex-shrink: 0;
+}
+.weather-sky {
+  font-weight: 500;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.weather-credit {
+  margin-left: auto;
+  padding-left: 8px;
+  font-size: 10px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.weather-credit:hover {
+  text-decoration: underline;
+}
+
+/* Floating weather warning, top centre. */
+.weather-warning {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 32px);
+  height: 36px;
+  padding: 0 6px 0 12px;
+  border-radius: 18px;
+  background: rgba(31, 29, 26, 0.84);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 6px 20px rgba(31, 29, 26, 0.22);
+  color: #fbfaf7;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  animation: warning-in 220ms ease-out;
+}
+.weather-warning > svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.weather-warning > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.weather-warning button {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(251, 250, 247, 0.16);
+  color: inherit;
+}
+.weather-warning button:hover {
+  background: rgba(251, 250, 247, 0.28);
+}
+@keyframes warning-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+}
+/* Between phone and wide desktop there's no room beside the search and sun card: push them down. */
+@media (max-width: 1100px) {
+  .app:has(.weather-warning) .search,
+  .app:has(.weather-warning) .sun-card {
+    top: 72px;
+  }
+}
 .solstices {
   display: flex;
   gap: 6px;
@@ -1098,8 +1189,36 @@ input.sun-date {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .layer-panel {
+  .layer-panel,
+  .weather-warning {
     animation: none;
+  }
+}
+
+/* Weather warning on phones: it takes the top row and the search and sun card move down. */
+@media (max-width: 760px) {
+  .weather-warning {
+    top: calc(12px + env(safe-area-inset-top, 0px));
+  }
+  .app:has(.weather-warning) .search {
+    top: calc(56px + env(safe-area-inset-top, 0px));
+  }
+  .app:has(.weather-warning) .sun-card {
+    top: calc(112px + env(safe-area-inset-top, 0px));
+    max-height: calc(100dvh - 112px - var(--arc-h) - 48px);
+  }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .weather-warning {
+    top: 8px;
+    height: 32px;
+  }
+  .app:has(.weather-warning) .search,
+  .app:has(.weather-warning) .sun-card {
+    top: 48px;
+  }
+  .app:has(.weather-warning) .sun-card {
+    max-height: calc(100dvh - 56px);
   }
 }
 

@@ -5,6 +5,7 @@ import { useSun } from '../sun/useSun';
 import { seasons } from '../sun/times';
 import { formatClock, formatDate, formatOffset, zonedParts, zonedToUtc } from '../sun/timezone';
 import { parseDate, parseTime } from './parseInput';
+import { WeatherRow } from './Weather';
 
 const DAY = 86400000;
 
@@ -185,6 +186,7 @@ export function SunCard() {
           </button>
         ))}
       </div>
+      <WeatherRow />
       {narrow && !expanded && (
         <p className="sun-summary mono">
           {position.elevation.toFixed(1)}° · {position.azimuth.toFixed(1)}° · ↑{day.sunrise !== null ? formatClock(day.sunrise, timeZone) : '–'} ↓

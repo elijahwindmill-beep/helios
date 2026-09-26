@@ -34,12 +34,12 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
    - Dragging the sun only moves it along today's path; it no longer jumps to a solstice or equinox path on its own. Shift + drag (any date) stays.
    - Summer solstice and Winter solstice buttons next to the time, always visible (on phones too).
    - Type an exact time and date (e.g. `06:47`, `12 Oct 2026`) in addition to the sliders.
-3. **Weather for the place and moment** (next, requested 26 Sep 2026)
+3. ~~**Weather for the place and moment**~~ Done 26 Sep 2026.
    - Forecast for the pin at the chosen date and time: sky (clear, cloudy, fog), cloud cover, temperature, wind, rain.
    - Source: [MET Norway Locationforecast](https://api.met.no/) (the Norwegian national weather service; free, CC BY 4.0, commercial use allowed with attribution, forecasts about 9 days ahead, works directly from the browser). Credited in the app and About panel.
    - A small floating warning at the top, minimal style, when conditions are poor for light and shadows (overcast, fog, rain or snow, strong wind), e.g. "Overcast at 08:00 · shadows won't show", with a × to dismiss.
    - Dates beyond the forecast range say so plainly instead of guessing. (Long-term climate averages would need a second source; Open-Meteo's free tier is non-commercial, so it would need their paid plan.)
-4. **Real-world light colour (white balance) through the day** (after phase 3, requested 26 Sep 2026)
+4. **Real-world light colour (white balance) through the day** (next, requested 26 Sep 2026)
    - As the sun nears the horizon the whole scene warms like real light: neutral daylight (about 5500 K) at high sun, warming through golden hour (sun below about 6°) to deep orange at sunset, then the cool blue of blue hour (sun 4° to 6° below the horizon) and dark night after that.
    - Driven by the real sun elevation at the pin, so it follows the time and date sliders, the arc and (later) keyframed clips.
    - Sunlit ground takes the warm sun colour, shadows take the cooler sky-blue fill, and the sky and horizon haze change with it.
@@ -73,6 +73,8 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 - **Time slider:** sunrise to sunset. Press **24 h** to cover the whole day.
 - **Date slider:** 1 January to 31 December. The marks are the equinoxes and solstices; **Mar / Jun / Sep / Dec** jump straight to them.
 - **Now** jumps to the current time.
+- **Weather** (under the solstice buttons): the forecast at the pin for the chosen time, from MET Norway: sky, temperature, wind, and rain or snow when there is some. Hourly for the next 2 to 3 days, then in 6-hour blocks, up to about 9 days ahead. Past times and dates further out say so instead of guessing.
+- **Weather warning:** a small dark note floats at the top when the forecast is poor for light and shadows (overcast, fog, rain, sleet, snow, thunder, or wind from 39 km/h), e.g. "Overcast at 08:00 · shadows won't show". × hides it for that forecast slot.
 - **Sun arc** (bottom): drag or click the sun along the arc to change the time. When it has keyboard focus, arrow keys step 5 minutes (Shift: 30), Home and End jump to sunrise and sunset.
 - **Cast shadows** (layer panel) shows where the terrain blocks the sun. Quality: Low, Medium (default), High. High loads more detailed elevation and takes longer to draw.
 - The relief shading on Paper and Terrain is lit from the real sun direction too.
@@ -140,6 +142,7 @@ Helios is made for monetised videos, so each source's commercial terms matter. T
 | [Mapzen Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) (Terrarium, AWS Open Data) | 3D terrain, contours, hillshade | Mixed open licences, [attribution required](https://github.com/tilezen/joerd/blob/master/docs/attribution.md) | Yes |
 | [OpenFreeMap](https://openfreemap.org) (OpenMapTiles schema) | Water, roads, lifts, names | © OpenStreetMap contributors (ODbL), © OpenMapTiles | Yes |
 | [Nominatim](https://operations.osmfoundation.org/policies/nominatim/) | Place search | ODbL data; max 1 request per second | Yes (light use) |
+| [MET Norway Locationforecast](https://api.met.no/) | Weather forecast at the pin | Data from The Norwegian Meteorological Institute, [CC BY 4.0](https://api.met.no/doc/License) | Yes, with attribution |
 | Esri World Imagery | Satellite (default) | Esri terms | **Check terms**: Esri limits use outside ArcGIS |
 | [EOX Sentinel-2 cloudless 2016](https://cloudless.eox.at) | Satellite (alternative) | Commercial use needs a paid EOX licence | **No**, not as-is |
 | MapTiler Satellite | Satellite (your key) | Your MapTiler plan | Depends on plan |
