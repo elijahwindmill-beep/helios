@@ -7,6 +7,7 @@ import { INITIAL_VIEW } from '../config';
 import { IMAGERY, TERRARIUM_URL } from './sources';
 import { basePaint, buildStyle, layerVisibility, satelliteSource, skyFor } from './style';
 import { installCameraControls } from './controls';
+import { installTouchControls } from './touchControls';
 import { readCamera } from './camera';
 import { setMap } from './mapInstance';
 import { installShadowLayer } from './shadowLayer';
@@ -76,9 +77,13 @@ export function MapView() {
       useApp.getState().setPin({ lat: ll.lat, lng: ll.lng, name: '' });
     });
 
-    const removeControls = installCameraControls(map, {
-      onDoubleClick: (ll) => useApp.getState().setPin({ lat: ll.lat, lng: ll.lng, name: '' }),
-    });
+    const movePin = (ll: { lat: number; lng: number }) => useApp.getState().setPin({ lat: ll.lat, lng: ll.lng, name: '' });
+    const removeMouse = installCameraControls(map, { onDoubleClick: movePin });
+    const removeTouch = installTouchControls(map, { onDoubleTap: movePin });
+    const removeControls = () => {
+      removeMouse();
+      removeTouch();
+    };
 
     // Live readout, at most once per frame.
     let raf = 0;
@@ -92,6 +97,22 @@ export function MapView() {
     map.on('move', publishCamera);
     map.on('idle', publishCamera);
     map.once('load', publishCamera);
+
+    // MapLibre opens the credits box on first load; on phones it would cover the map buttons.
+    // Start it collapsed there (it stays one tap away on the (i) button), as MapLibre itself
+    // does after the first drag.
+    // It re-opens as sources load, so keep collapsing it until the viewer opens it themselves.
+    const collapseAttribution = () => {
+      if (!window.matchMedia('(max-width: 760px)').matches) return;
+      map.getContainer().querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
+    };
+    map.on('idle', collapseAttribution);
+    map.once('load', () => {
+      map
+        .getContainer()
+        .querySelector('.maplibregl-ctrl-attrib-button')
+        ?.addEventListener('click', () => map.off('idle', collapseAttribution), { once: true });
+    });
 
     let removeShadows = () => {};
     map.once('load', () => {
