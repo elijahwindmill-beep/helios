@@ -11,7 +11,7 @@ export const TERRAIN_ATTRIBUTION =
 export const OPENFREEMAP_URL = 'https://tiles.openfreemap.org/planet';
 export const GLYPHS_URL = 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf';
 
-export type ImageryId = 'esri' | 'eox' | 'maptiler';
+export type ImageryId = 'esri' | 'southtyrol' | 'eox' | 'maptiler';
 
 /** 'ok' = fine for monetised videos, 'check' = read the terms first, 'no' = needs a paid licence. */
 export type CommercialUse = 'ok' | 'check' | 'no';
@@ -24,7 +24,7 @@ export interface ImageryProvider {
   note: string;
   needsKey: boolean;
   /** MapLibre raster source for this provider. `key` only matters when needsKey. */
-  source(key: string): { tiles?: string[]; url?: string; tileSize: number; maxzoom?: number };
+  source(key: string): { tiles?: string[]; url?: string; tileSize: number; maxzoom?: number; bounds?: [number, number, number, number] };
 }
 
 export const IMAGERY: Record<ImageryId, ImageryProvider> = {
@@ -42,6 +42,23 @@ export const IMAGERY: Record<ImageryId, ImageryProvider> = {
       ],
       tileSize: 256,
       maxzoom: 19,
+    }),
+  },
+  southtyrol: {
+    id: 'southtyrol',
+    label: 'South Tyrol aerial 2023 (20 cm)',
+    attribution:
+      'Imagery: <a href="https://data.civis.bz.it/" target="_blank" rel="noopener">Autonomous Province of Bolzano</a>, orthophoto 2023 (CC0)',
+    commercial: 'ok',
+    note: "The province's 2023 aerial photos, about 20 cm per pixel: far sharper than the others, and CC0 (free for any use). South Tyrol only (Seceda, Odle, Sella, Tre Cime's north side…); elsewhere the map is blank.",
+    needsKey: false,
+    source: () => ({
+      tiles: [
+        'https://geoservices.buergernetz.bz.it/mapproxy/ows?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=p_bz-Orthoimagery:Aerial-2023-RGB&STYLE=default&TILEMATRIXSET=EPSG_3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg',
+      ],
+      tileSize: 256,
+      maxzoom: 20,
+      bounds: [10.35, 46.175, 12.525, 47.142],
     }),
   },
   eox: {
@@ -73,7 +90,7 @@ export const IMAGERY: Record<ImageryId, ImageryProvider> = {
   },
 };
 
-export const IMAGERY_ORDER: ImageryId[] = ['esri', 'eox', 'maptiler'];
+export const IMAGERY_ORDER: ImageryId[] = ['esri', 'southtyrol', 'eox', 'maptiler'];
 
 /** Everything that is not imagery, for the About panel and README. */
 export const DATA_SOURCES = [

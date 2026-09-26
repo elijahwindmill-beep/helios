@@ -14,8 +14,8 @@ Default location: Seceda ridgeline, Val Gardena (46.60068, 11.72598).
 | 2 | Sun position, cast terrain shadows, time and date sliders, sun scrubber | Done |
 | 3 | Compass ring, sun paths, solstice paths, draggable sun | Done |
 | 4 | Routes (GPX/KML/GeoJSON), places, geotagged photos | Done |
-| 5 | Keyframes, clips, timeline, playback, video export | Built, being polished |
-| 6 | Alpenglow dark theme, sun-hours heatmap, South Tyrol LiDAR, extras | |
+| 5 | Keyframes, clips, timeline, playback, video export, sun-hours heatmap, South Tyrol aerial imagery | Done |
+| 6 | Paper (light) theme toggle, South Tyrol LiDAR terrain (needs a tile server), optional Google 3D tiles, performance modes | Next |
 
 The full build brief is in [PROMPT.md](PROMPT.md).
 
@@ -174,6 +174,7 @@ Helios is made for monetised videos, so each source's commercial terms matter. T
 | [Wikimedia Commons](https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia) | Photo spots | Each photo has its own free licence (mostly CC BY / BY-SA), shown and linked with the photo; credit the author when you reuse one | Yes, with credit (and share-alike where the licence says so) |
 | [MET Norway Locationforecast](https://api.met.no/) | Weather forecast at the pin | Data from The Norwegian Meteorological Institute, [CC BY 4.0](https://api.met.no/doc/License) | Yes, with attribution |
 | Esri World Imagery | Satellite (default) | Esri terms | **Check terms**: Esri limits use outside ArcGIS |
+| [South Tyrol orthophoto 2023](https://data.civis.bz.it/) (Autonomous Province of Bolzano) | Aerial imagery, ~20 cm, South Tyrol only | CC0 | Yes |
 | [EOX Sentinel-2 cloudless 2016](https://cloudless.eox.at) | Satellite (alternative) | Commercial use needs a paid EOX licence | **No**, not as-is |
 | MapTiler Satellite | Satellite (your key) | Your MapTiler plan | Depends on plan |
 
@@ -181,7 +182,7 @@ Sun position uses NOAA's solar calculator (accurate to about 0.01°). Sunrise an
 
 Shadows are computed from the elevation data: for every ground point Helios walks toward the sun and checks whether terrain rises above it, including mountains up to 12 km away and the curvature of the earth. Edges are softened by the width of the sun's disk.
 
-Terrain data is about 30 m resolution: good for large-scale light and shadow on ridges and valleys, too coarse for single rocks or buildings. A higher-resolution South Tyrol LiDAR option is planned for phase 6.
+Terrain data is about 30 m resolution: good for large-scale light and shadow on ridges and valleys, too coarse for single rocks or buildings. South Tyrol publishes 0.5 m LiDAR elevation (CC0), but its map service only serves it as pre-lit hillshade pictures, not heights, so it can't drive the 3D terrain or shadows in the browser; using it would need the raw files turned into elevation tiles on a server (a phase 6 option). Its 20 cm 2023 aerial photos are available as an imagery choice.
 
 Fonts: Barlow and Barlow Condensed (SIL Open Font License), loaded from Google Fonts.
 
