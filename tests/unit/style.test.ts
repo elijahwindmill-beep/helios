@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { buildStyle, layerVisibility } from '../../src/map/style';
-import { IMAGERY } from '../../src/map/sources';
+import { ELEVATION, IMAGERY } from '../../src/map/sources';
 
 describe('base layers', () => {
-  const all = { shadows: true, sunPath: true, solstices: true, compass: true, contours: true, labels: true, lightColour: true, routes: true, places: true, photos: true, lens: true, photoSpots: true, sunHours: false };
+  const all = { shadows: true, sunPath: true, solstices: true, compass: true, contours: true, labels: true, lightColour: true, routes: true, places: true, photos: true, lens: true, photoSpots: true, sunHours: false, google3d: false };
 
   it('shows exactly one base at a time', () => {
     const sat = layerVisibility('satellite', all);
@@ -34,12 +34,13 @@ describe('base layers', () => {
       overlays: all,
       imagery: IMAGERY.esri,
       imageryKey: '',
+      elevation: ELEVATION.mapterhorn,
       contourTilesUrl: 'dem-contour://{z}/{x}/{y}',
     });
     expect(style.terrain?.source).toBe('dem-terrain');
     const ids = style.layers.map((l) => l.id);
-    // 'shadows' and 'sun-hours' are added at runtime once elevation loads.
-    for (const id of Object.keys(layerVisibility('paper', all))) if (id !== 'shadows' && id !== 'sun-hours') expect(ids).toContain(id);
+    // The shadow layers and 'sun-hours' are added at runtime once elevation loads.
+    for (const id of Object.keys(layerVisibility('paper', all))) if (!['shadows', 'shadows-detail', 'sun-hours'].includes(id)) expect(ids).toContain(id);
   });
 
   it('never puts a MapTiler key in the style unless one is given', () => {

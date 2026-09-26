@@ -15,6 +15,8 @@ export interface Mosaic extends TileRange {
   width: number;
   height: number;
   heights: Float32Array;
+  /** How many of its tiles had data this detailed (the rest are stretched from coarser ones). */
+  nativeTiles: number;
 }
 
 export interface Bounds {
@@ -135,15 +137,17 @@ export async function buildMosaic(r: TileRange, signal?: AbortSignal): Promise<M
   const width = tilesX * TILE_SIZE;
   const height = tilesY * TILE_SIZE;
   const heights = new Float32Array(width * height);
+  let nativeTiles = 0;
   const jobs: Promise<void>[] = [];
   for (let ty = 0; ty < tilesY; ty++) {
     for (let tx = 0; tx < tilesX; tx++) {
       jobs.push(
         getDemTile(r.z, r.x0 + tx, r.y0 + ty, signal).then(
           (tile) => {
+            if (tile.native) nativeTiles++;
             for (let row = 0; row < TILE_SIZE; row++) {
               heights.set(
-                tile.subarray(row * TILE_SIZE, (row + 1) * TILE_SIZE),
+                tile.heights.subarray(row * TILE_SIZE, (row + 1) * TILE_SIZE),
                 (ty * TILE_SIZE + row) * width + tx * TILE_SIZE,
               );
             }
@@ -156,5 +160,5 @@ export async function buildMosaic(r: TileRange, signal?: AbortSignal): Promise<M
     }
   }
   await Promise.all(jobs);
-  return { ...r, width, height, heights };
+  return { ...r, width, height, heights, nativeTiles };
 }

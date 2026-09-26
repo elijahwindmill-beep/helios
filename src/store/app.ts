@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { BaseLayer, Overlays } from '../map/style';
-import type { ImageryId } from '../map/sources';
+import type { ElevationId, ImageryId } from '../map/sources';
 import type { CameraState } from '../map/cameraMath';
 import { SECEDA } from '../config';
 import { readTimeFromUrl } from './urlTime';
@@ -12,7 +12,11 @@ export interface Pin {
   name: string;
 }
 
-export type ShadowQuality = 'low' | 'medium' | 'high';
+/** Trades detail for frame rate: shadows, drawing resolution, lens effects. */
+export type Performance = 'smooth' | 'balanced' | 'detailed';
+
+/** Frost is the dark HUD, Paper the light one; auto follows the system. */
+export type Theme = 'frost' | 'paper' | 'auto';
 
 export interface Hud {
   left: boolean;
@@ -33,7 +37,12 @@ interface AppState {
   time: number;
   /** Time slider spans the whole day instead of sunrise to sunset. */
   fullDay: boolean;
-  shadowQuality: ShadowQuality;
+  performance: Performance;
+  theme: Theme;
+  /** Elevation service for terrain, shadows, contours and hillshade. */
+  elevation: ElevationId;
+  /** The viewer's own Google Maps key for Photorealistic 3D Tiles; only kept in this browser. */
+  googleKey: string;
   /** 0–1, how strong the lens look is when it's on. */
   lensStrength: number;
   /** Which groups of controls are shown; hiding them all gives a clear map. Not saved. */
@@ -56,7 +65,10 @@ interface AppState {
   /** Exact moment, not rounded to the minute: timeline playback and export. */
   setTimeExact(ms: number): void;
   setFullDay(on: boolean): void;
-  setShadowQuality(q: ShadowQuality): void;
+  setPerformance(p: Performance): void;
+  setTheme(t: Theme): void;
+  setElevation(id: ElevationId): void;
+  setGoogleKey(key: string): void;
   setLensStrength(v: number): void;
   setHud(patch: Partial<Hud>): void;
   /** Sets several layer switches at once (timeline keyframes). */
@@ -83,6 +95,7 @@ const DEFAULT_OVERLAYS: Overlays = {
   lens: true,
   photoSpots: true,
   sunHours: false,
+  google3d: false,
 };
 
 export const useApp = create<AppState>()(
@@ -97,7 +110,10 @@ export const useApp = create<AppState>()(
       aboutOpen: false,
       time: readTimeFromUrl() ?? Date.now(),
       fullDay: false,
-      shadowQuality: 'medium',
+      performance: 'balanced',
+      theme: 'frost',
+      elevation: 'mapterhorn',
+      googleKey: import.meta.env.VITE_GOOGLE_MAPS_KEY ?? '',
       lensStrength: 1,
       hud: { left: true, right: true, top: true, bottom: true },
       shadowStatus: { state: 'idle' },
@@ -114,7 +130,10 @@ export const useApp = create<AppState>()(
       setTime: (time) => set({ time: Math.round(time / 60000) * 60000 }),
       setTimeExact: (time) => set({ time }),
       setFullDay: (fullDay) => set({ fullDay }),
-      setShadowQuality: (shadowQuality) => set({ shadowQuality }),
+      setPerformance: (performance) => set({ performance }),
+      setTheme: (theme) => set({ theme }),
+      setElevation: (elevation) => set({ elevation }),
+      setGoogleKey: (googleKey) => set({ googleKey }),
       setLensStrength: (lensStrength) => set({ lensStrength: Math.min(1, Math.max(0, lensStrength)) }),
       setHud: (patch) => set((s) => ({ hud: { ...s.hud, ...patch } })),
       setOverlays: (patch) =>
@@ -131,7 +150,7 @@ export const useApp = create<AppState>()(
     }),
     {
       name: 'helios.settings',
-      version: 2,
+      version: 3,
       // Only viewer preferences persist here; projects get their own save in phase 5.
       // Time is not saved: every visit starts at "now" unless the link carries a time.
       partialize: (s) => ({
@@ -141,7 +160,10 @@ export const useApp = create<AppState>()(
         maptilerKey: s.maptilerKey,
         pin: s.pin,
         fullDay: s.fullDay,
-        shadowQuality: s.shadowQuality,
+        performance: s.performance,
+        theme: s.theme,
+        elevation: s.elevation,
+        googleKey: s.googleKey,
         lensStrength: s.lensStrength,
         tutorialSeen: s.tutorialSeen,
       }),
@@ -150,7 +172,13 @@ export const useApp = create<AppState>()(
         const p = (persisted ?? {}) as Partial<AppState>;
         return { ...current, ...p, overlays: { ...DEFAULT_OVERLAYS, ...p.overlays } };
       },
-      migrate: (state) => state as AppState,
+      migrate: (state, version) => {
+        const s = state as Partial<AppState> & { shadowQuality?: 'low' | 'medium' | 'high' };
+        // v3: shadow quality became the performance mode.
+        if (version < 3 && s.shadowQuality) s.performance = ({ low: 'smooth', medium: 'balanced', high: 'detailed' } as const)[s.shadowQuality];
+        delete s.shadowQuality;
+        return s as AppState;
+      },
     },
   ),
 );

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { shadowAt, type MarchSettings } from '../../src/terrain/march';
-import { decodeTerrarium } from '../../src/terrain/demTiles';
+import { cutPiece, decodeTerrarium } from '../../src/terrain/demTiles';
 import { planMosaic, rangeContains, metersPerPixel } from '../../src/terrain/mosaic';
 
 const W = 400;
@@ -81,5 +81,30 @@ describe('elevation tiles', () => {
   it('z12 grid spacing in the Dolomites is about 26 m', () => {
     expect(metersPerPixel(46.6, 12)).toBeGreaterThan(25);
     expect(metersPerPixel(46.6, 12)).toBeLessThan(28);
+  });
+});
+
+describe('elevation pieces', () => {
+  // A 512 px service tile whose height is its column + 1000 × row.
+  const size = 512;
+  const src = new Float32Array(size * size);
+  for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) src[r * size + c] = c + 1000 * r;
+
+  it('cuts the four 256 px pieces of the next zoom straight out of a 512 px tile', () => {
+    // Service tile 10/4/6 holds pieces 11/8..9/12..13; 11/9/13 is its bottom-right quarter.
+    const piece = cutPiece(src, size, 11, 9, 13, 10, 4, 6);
+    expect(piece[0]).toBe(256 + 1000 * 256);
+    expect(piece[255]).toBe(511 + 1000 * 256);
+    expect(piece[255 * 256]).toBe(256 + 1000 * 511);
+  });
+
+  it('stretches a coarser tile when the detailed one is missing', () => {
+    // Piece 12/16/24 is the top-left sixteenth of service tile 10/4/6: 128 service px across.
+    const piece = cutPiece(src, size, 12, 16, 24, 10, 4, 6);
+    // Piece pixel centres fall at service x = (col + 0.5) / 2 - 0.5, clamped at the edge.
+    expect(piece[0]).toBeCloseTo(0, 5);
+    expect(piece[3]).toBeCloseTo(1.25, 5);
+    expect(piece[256 * 3]).toBeCloseTo(1250, 3);
+    expect(piece[255]).toBeCloseTo(127.25, 5);
   });
 });

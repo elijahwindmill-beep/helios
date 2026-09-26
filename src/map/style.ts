@@ -6,9 +6,7 @@ import type {
 import {
   GLYPHS_URL,
   OPENFREEMAP_URL,
-  TERRAIN_ATTRIBUTION,
-  TERRAIN_MAXZOOM,
-  TERRARIUM_URL,
+  type ElevationProvider,
   type ImageryProvider,
 } from './sources';
 
@@ -33,6 +31,8 @@ export interface Overlays {
   photoSpots: boolean;
   /** Hours of direct sun over the viewed day, as a heatmap (map/shadowLayer.ts). Replaces the cast shadows while on. */
   sunHours: boolean;
+  /** Google Photorealistic 3D Tiles with the viewer's own key (map/google3d.ts). Hides the terrain it covers. */
+  google3d: boolean;
 }
 
 // Paper tokens from the brief / mockup A.
@@ -83,6 +83,7 @@ export function layerVisibility(base: BaseLayer, overlays: Overlays): Record<str
   for (const [id, key] of Object.entries(OVERLAY_GROUPS)) out[id] = overlays[key];
   // The sun-hours heatmap already includes the shadows, so it stands in for them.
   out.shadows = overlays.shadows && !overlays.sunHours;
+  out['shadows-detail'] = out.shadows;
   out['sun-hours'] = !!overlays.sunHours;
   return out;
 }
@@ -134,14 +135,27 @@ export function satelliteSource(provider: ImageryProvider, key: string) {
 
 const NAME = ['coalesce', ['get', 'name'], ['get', 'name_en']] as const;
 
+/**
+ * Elevation for the 3D terrain, and a second source over the same tiles for the hillshade
+ * (MapLibre warns when terrain and hillshade share one).
+ */
+export function demSources(p: ElevationProvider) {
+  const common = { type: 'raster-dem' as const, tiles: [p.url], encoding: p.encoding, tileSize: p.tileSize };
+  return {
+    'dem-terrain': { ...common, maxzoom: p.terrainMaxzoom, attribution: p.attribution },
+    'dem-hillshade': { ...common, maxzoom: p.hillshadeMaxzoom },
+  };
+}
+
 export function buildStyle(opts: {
   base: BaseLayer;
   overlays: Overlays;
   imagery: ImageryProvider;
   imageryKey: string;
+  elevation: ElevationProvider;
   contourTilesUrl: string;
 }): StyleSpecification {
-  const { base, overlays, imagery, imageryKey, contourTilesUrl } = opts;
+  const { base, overlays, imagery, imageryKey, elevation, contourTilesUrl } = opts;
   const visible = layerVisibility(base, overlays);
   const vis = (id: string) => ({ visibility: visible[id] ? ('visible' as const) : ('none' as const) });
 
@@ -320,23 +334,7 @@ export function buildStyle(opts: {
     version: 8,
     glyphs: GLYPHS_URL,
     sources: {
-      'dem-terrain': {
-        type: 'raster-dem',
-        tiles: [TERRARIUM_URL],
-        encoding: 'terrarium',
-        tileSize: 256,
-        maxzoom: TERRAIN_MAXZOOM,
-        attribution: TERRAIN_ATTRIBUTION,
-      },
-      // A second source over the same tiles: MapLibre warns when terrain and hillshade share one.
-      // Capped at z12: the ~30 m data shades as blotchy noise when overzoomed further.
-      'dem-hillshade': {
-        type: 'raster-dem',
-        tiles: [TERRARIUM_URL],
-        encoding: 'terrarium',
-        tileSize: 256,
-        maxzoom: 12,
-      },
+      ...demSources(elevation),
       contours: { type: 'vector', tiles: [contourTilesUrl], maxzoom: 15 },
       omt: { type: 'vector', url: OPENFREEMAP_URL },
       satellite: satelliteSource(imagery, imageryKey),

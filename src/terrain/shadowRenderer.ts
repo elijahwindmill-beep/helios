@@ -1,15 +1,25 @@
 import { EARTH_RADIUS } from '../map/cameraMath';
 import { TILE_SIZE } from './demTiles';
 import { CURVATURE, PENUMBRA_TAN, stepGrowth, sunDirection, type MarchSettings } from './march';
-import type { Mosaic } from './mosaic';
+import type { Mosaic, TileRange } from './mosaic';
 
 // GPU version of march.ts: one fragment per output pixel, each walking toward the sun
-// over the height mosaic. Keep the two in step.
+// over the height mosaic. Keep the two in step (the close-up grid and output area are GPU-only).
 const FRAGMENT = `#version 300 es
 precision highp float;
 precision highp sampler2D;
 uniform sampler2D uDem;
 uniform vec2 uDemSize;
+// Optional close-up grid of finer heights inside the wide one: where a ray is over it, use it.
+uniform sampler2D uFine;
+uniform bool uHasFine;
+uniform vec2 uFineOrigin;
+uniform float uFineScale;
+uniform vec2 uFineSize;
+// The output covers this part of the wide grid (x, y, width, height in its pixels) …
+uniform vec4 uArea;
+// … except this rectangle (x0, y0, x1, y1), which another layer draws.
+uniform vec4 uHole;
 uniform vec2 uOutSize;
 uniform vec2 uDir;
 uniform float uTanEl;
@@ -28,23 +38,35 @@ out vec4 outColor;
 
 const float PI = 3.141592653589793;
 
-float heightAt(vec2 p) {
+float sampleGrid(sampler2D tex, vec2 size, vec2 p) {
   vec2 f = p - 0.5;
   vec2 i = floor(f);
   vec2 t = f - i;
-  ivec2 maxI = ivec2(uDemSize) - 1;
+  ivec2 maxI = ivec2(size) - 1;
   ivec2 a = clamp(ivec2(i), ivec2(0), maxI);
   ivec2 b = clamp(ivec2(i) + 1, ivec2(0), maxI);
-  float h00 = texelFetch(uDem, ivec2(a.x, a.y), 0).r;
-  float h10 = texelFetch(uDem, ivec2(b.x, a.y), 0).r;
-  float h01 = texelFetch(uDem, ivec2(a.x, b.y), 0).r;
-  float h11 = texelFetch(uDem, ivec2(b.x, b.y), 0).r;
+  float h00 = texelFetch(tex, ivec2(a.x, a.y), 0).r;
+  float h10 = texelFetch(tex, ivec2(b.x, a.y), 0).r;
+  float h01 = texelFetch(tex, ivec2(a.x, b.y), 0).r;
+  float h11 = texelFetch(tex, ivec2(b.x, b.y), 0).r;
   return mix(mix(h00, h10, t.x), mix(h01, h11, t.x), t.y);
 }
 
+float heightAt(vec2 p) {
+  if (uHasFine) {
+    vec2 f = (p - uFineOrigin) * uFineScale;
+    if (f.x >= 0.5 && f.y >= 0.5 && f.x <= uFineSize.x - 0.5 && f.y <= uFineSize.y - 0.5) return sampleGrid(uFine, uFineSize, f);
+  }
+  return sampleGrid(uDem, uDemSize, p);
+}
+
 void main() {
-  // Output row 0 is the bottom of the canvas; mosaic row 0 is the north edge.
-  vec2 p = vec2(gl_FragCoord.x, uOutSize.y - gl_FragCoord.y) * (uDemSize / uOutSize);
+  // Output row 0 is the bottom of the canvas; grid row 0 is the north edge.
+  vec2 p = uArea.xy + vec2(gl_FragCoord.x, uOutSize.y - gl_FragCoord.y) / uOutSize * uArea.zw;
+  if (p.x > uHole.x && p.y > uHole.y && p.x < uHole.z && p.y < uHole.w) {
+    outColor = vec4(0.0);
+    return;
+  }
   float n = PI - 2.0 * PI * (uTileY0 + p.y / ${TILE_SIZE}.0) / uWorldTiles;
   float lat = atan(sinh(n));
   float mpp = uMppEquator * cos(lat);
@@ -89,6 +111,10 @@ export interface ShadowRenderParams {
   steps: number;
   /** How far away a mountain can still cast a shadow, metres. */
   maxDistanceMeters: number;
+  /** Draw only the close-up area (the detail grid) instead of the whole wide grid. */
+  detail?: boolean;
+  /** Tiles of the wide grid to leave empty because the close-up layer covers them. */
+  hole?: TileRange | null;
 }
 
 export class ShadowRenderer {
@@ -96,6 +122,11 @@ export class ShadowRenderer {
   private gl: WebGL2RenderingContext;
   private program: WebGLProgram;
   private dem: WebGLTexture;
+  private fine: WebGLTexture;
+  private detailMosaic: Mosaic | null = null;
+  /** Size of the last pass, in the canvas's bottom-left corner. */
+  outW = 0;
+  outH = 0;
   private uniforms = new Map<string, WebGLUniformLocation | null>();
   private mosaic: Mosaic | null = null;
   readonly maxTextureSize: number;
@@ -115,6 +146,7 @@ export class ShadowRenderer {
     this.maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
     this.program = link(gl, VERTEX, FRAGMENT);
     this.dem = gl.createTexture()!;
+    this.fine = gl.createTexture()!;
   }
 
   private u(name: string) {
@@ -122,16 +154,38 @@ export class ShadowRenderer {
     return this.uniforms.get(name)!;
   }
 
-  setMosaic(m: Mosaic) {
+  private upload(texture: WebGLTexture, m: Mosaic) {
     const gl = this.gl;
-    this.mosaic = m;
-    gl.bindTexture(gl.TEXTURE_2D, this.dem);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, m.width, m.height, 0, gl.RED, gl.FLOAT, m.heights);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  }
+
+  setMosaic(m: Mosaic) {
+    this.mosaic = m;
+    this.upload(this.dem, m);
+  }
+
+  /** Finer heights for part of the wide grid (a higher zoom, inside it), or null for none. */
+  setDetail(d: Mosaic | null) {
+    if (d === this.detailMosaic) return;
+    this.detailMosaic = d;
+    if (d) this.upload(this.fine, d);
+  }
+
+  /** A tile range of another zoom as a rectangle in the wide grid's pixels: x, y, width, height. */
+  private rectOf(r: TileRange, m: Mosaic): [number, number, number, number] {
+    const k = 2 ** (r.z - m.z);
+    return [
+      (r.x0 / k - m.x0) * TILE_SIZE,
+      (r.y0 / k - m.y0) * TILE_SIZE,
+      ((r.x1 - r.x0 + 1) / k) * TILE_SIZE,
+      ((r.y1 - r.y0 + 1) / k) * TILE_SIZE,
+    ];
   }
 
   hasMosaic(): boolean {
@@ -141,16 +195,25 @@ export class ShadowRenderer {
   /** Draws the shadow mask for the current mosaic into `canvas`. Returns render time, ms. */
   render(p: ShadowRenderParams): number {
     const m = this.mosaic;
-    if (!m) return 0;
+    const d = p.detail ? this.detailMosaic : null;
+    if (!m || (p.detail && !d)) return 0;
     const gl = this.gl;
     const t0 = performance.now();
-    const scale = Math.min(1, p.maxOutputSize / Math.max(m.width, m.height));
-    const outW = Math.max(1, Math.round(m.width * scale));
-    const outH = Math.max(1, Math.round(m.height * scale));
-    if (this.canvas.width !== outW || this.canvas.height !== outH) {
-      this.canvas.width = outW;
-      this.canvas.height = outH;
+    const area: [number, number, number, number] = d ? this.rectOf(d, m) : [0, 0, m.width, m.height];
+    // Output pixels follow the grid being drawn: the close-up one, or the wide one.
+    const gridW = d ? d.width : m.width;
+    const gridH = d ? d.height : m.height;
+    const scale = Math.min(1, p.maxOutputSize / Math.max(gridW, gridH));
+    const outW = Math.max(1, Math.round(gridW * scale));
+    const outH = Math.max(1, Math.round(gridH * scale));
+    // The canvas only grows, so switching between the wide and close-up passes doesn't
+    // reallocate it every frame; each pass draws into its bottom-left corner.
+    if (this.canvas.width < outW || this.canvas.height < outH) {
+      this.canvas.width = Math.max(this.canvas.width, outW);
+      this.canvas.height = Math.max(this.canvas.height, outH);
     }
+    this.outW = outW;
+    this.outH = outH;
     const worldTiles = 2 ** m.z;
     const mppEquator = (2 * Math.PI * EARTH_RADIUS) / (TILE_SIZE * worldTiles);
     const midLat = Math.atan(Math.sinh(Math.PI - (2 * Math.PI * (m.y0 + m.height / TILE_SIZE / 2)) / worldTiles));
@@ -158,14 +221,30 @@ export class ShadowRenderer {
       p.maxDistanceMeters / (mppEquator * Math.cos(midLat)),
       Math.hypot(m.width, m.height),
     );
-    const march: MarchSettings = { steps: p.steps, firstStep: 0.7, maxDistance };
+    // Steps start at 0.7 pixels of the finest grid in use, so slopes facing away shade themselves.
+    const fineScale = d ? 2 ** (d.z - m.z) : 1;
+    const march: MarchSettings = { steps: p.steps, firstStep: 0.7 / fineScale, maxDistance };
     const [dx, dy] = sunDirection(p.azimuth);
+    const hole = p.hole ? this.rectOf(p.hole, m) : null;
 
     gl.viewport(0, 0, outW, outH);
     gl.useProgram(this.program);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.dem);
     gl.uniform1i(this.u('uDem'), 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.fine);
+    gl.uniform1i(this.u('uFine'), 1);
+    gl.uniform1i(this.u('uHasFine'), d ? 1 : 0);
+    if (d) {
+      const [fx, fy] = this.rectOf(d, m);
+      gl.uniform2f(this.u('uFineOrigin'), fx, fy);
+      gl.uniform1f(this.u('uFineScale'), fineScale);
+      gl.uniform2f(this.u('uFineSize'), d.width, d.height);
+    }
+    gl.uniform4f(this.u('uArea'), ...area);
+    if (hole) gl.uniform4f(this.u('uHole'), hole[0], hole[1], hole[0] + hole[2], hole[1] + hole[3]);
+    else gl.uniform4f(this.u('uHole'), 0, 0, 0, 0);
     gl.uniform2f(this.u('uDemSize'), m.width, m.height);
     gl.uniform2f(this.u('uOutSize'), outW, outH);
     gl.uniform2f(this.u('uDir'), dx, dy);
@@ -190,11 +269,22 @@ export class ShadowRenderer {
     return performance.now() - t0;
   }
 
-  /** The whole last render as RGBA bytes, bottom row first (shadow amount is in alpha). */
+  /** Copies the last pass into a 2D canvas of its own size, e.g. a map canvas source. */
+  copyTo(target: HTMLCanvasElement) {
+    if (target.width !== this.outW || target.height !== this.outH) {
+      target.width = this.outW;
+      target.height = this.outH;
+    }
+    const ctx = target.getContext('2d')!;
+    ctx.clearRect(0, 0, this.outW, this.outH);
+    ctx.drawImage(this.canvas, 0, this.canvas.height - this.outH, this.outW, this.outH, 0, 0, this.outW, this.outH);
+  }
+
+  /** The whole last pass as RGBA bytes, bottom row first (shadow amount is in alpha). */
   readMask(): Uint8Array {
     const gl = this.gl;
-    const px = new Uint8Array(this.canvas.width * this.canvas.height * 4);
-    gl.readPixels(0, 0, this.canvas.width, this.canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    const px = new Uint8Array(this.outW * this.outH * 4);
+    gl.readPixels(0, 0, this.outW, this.outH, gl.RGBA, gl.UNSIGNED_BYTE, px);
     return px;
   }
 
@@ -202,7 +292,7 @@ export class ShadowRenderer {
   readShadow(col: number, rowFromTop: number, strength: number): number {
     const gl = this.gl;
     const px = new Uint8Array(4);
-    gl.readPixels(col, this.canvas.height - 1 - rowFromTop, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    gl.readPixels(col, this.outH - 1 - rowFromTop, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
     return px[3] / 255 / strength;
   }
 }

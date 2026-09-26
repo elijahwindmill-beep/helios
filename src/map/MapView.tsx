@@ -1,11 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { Map as MlMap, Marker, addProtocol, setWorkerUrl } from 'maplibre-gl';
+import { Map as MlMap, Marker, addProtocol, setWorkerUrl, type VectorTileSource } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import mlcontour from 'maplibre-contour';
 import { useApp } from '../store/app';
 import { INITIAL_VIEW } from '../config';
-import { IMAGERY, TERRARIUM_URL } from './sources';
-import { basePaint, buildStyle, layerVisibility, satelliteSource, skyFor } from './style';
+import { ELEVATION, ELEVATION_ORDER, IMAGERY, type ElevationId } from './sources';
+import { basePaint, buildStyle, demSources, layerVisibility, satelliteSource, skyFor } from './style';
+import { PERFORMANCE } from './performance';
 import { installCameraControls } from './controls';
 import { installTouchControls } from './touchControls';
 import { readCamera } from './camera';
@@ -24,21 +25,24 @@ import { COMPACT_QUERY } from '../ui/useMedia';
 // helios-maplibre-worker plugin in vite.config.ts serves the original files here instead.
 setWorkerUrl(`${import.meta.env.BASE_URL}maplibre/maplibre-gl-worker.mjs`);
 
-// One shared DEM cache for contour generation, decoded in a worker.
-const demSource = new mlcontour.DemSource({
-  url: TERRARIUM_URL,
-  encoding: 'terrarium',
-  maxzoom: 13,
-  worker: true,
-});
-demSource.setupMaplibre({ addProtocol });
-const CONTOUR_TILES = demSource.contourProtocolUrl({
-  // zoom: [minor, major] spacing in metres
-  thresholds: { 10: [200, 1000], 11: [100, 500], 12: [50, 250], 13: [20, 100], 15: [10, 50] },
-  elevationKey: 'ele',
-  levelKey: 'level',
-  contourLayer: 'contours',
-});
+// One DEM cache per elevation service for contour generation, decoded in a worker.
+const CONTOUR_TILES = Object.fromEntries(
+  ELEVATION_ORDER.map((id) => {
+    const p = ELEVATION[id];
+    const dem = new mlcontour.DemSource({ id: `contour-${id}`, url: p.url, encoding: p.encoding, maxzoom: p.contourMaxzoom, worker: true });
+    dem.setupMaplibre({ addProtocol });
+    const url = dem.contourProtocolUrl({
+      // zoom: [minor, major] spacing in metres
+      thresholds: { 10: [200, 1000], 11: [100, 500], 12: [50, 250], 13: [20, 100], 15: [10, 50] },
+      elevationKey: 'ele',
+      levelKey: 'level',
+      contourLayer: 'contours',
+    });
+    return [id, url];
+  }),
+) as Record<ElevationId, string>;
+
+const pixelRatio = () => Math.min(window.devicePixelRatio || 1, PERFORMANCE[useApp.getState().performance].maxPixelRatio);
 
 /**
  * The view in the page link (#map=zoom/lat/lng/bearing/pitch), read once at startup.
@@ -71,7 +75,8 @@ export function MapView() {
         overlays: s.overlays,
         imagery: IMAGERY[s.imagery],
         imageryKey: s.maptilerKey,
-        contourTilesUrl: CONTOUR_TILES,
+        elevation: ELEVATION[s.elevation],
+        contourTilesUrl: CONTOUR_TILES[s.elevation],
       }),
       ...INITIAL_VIEW,
       ...LINKED_VIEW,
@@ -80,8 +85,18 @@ export function MapView() {
       attributionControl: { compact: true },
       maplibreLogo: false,
       canvasContextAttributes: { preserveDrawingBuffer: false, antialias: true },
+      pixelRatio: pixelRatio(),
     });
     setMap(map);
+
+    // Past its LiDAR coverage the detailed elevation service answers 404 and MapLibre keeps the
+    // coarser parent tile, as intended: keep those expected misses out of the console.
+    map.on('error', (e) => {
+      const err = e.error as { status?: number } | undefined;
+      const sourceId = (e as { sourceId?: string }).sourceId ?? '';
+      if (err?.status === 404 && sourceId.startsWith('dem-')) return;
+      console.error(e.error);
+    });
 
     const pin = new Marker({ element: makePinElement(), anchor: 'bottom', draggable: true })
       .setLngLat([s.pin.lng, s.pin.lat])
@@ -159,15 +174,21 @@ export function MapView() {
 
     // Store -> map. The style is built once; switching bases only flips layer visibility,
     // so later custom layers (shadows, sun) survive a base change.
+    // (Not map.isStyleLoaded(): that is false whenever tiles are still loading, and 'load'
+    // only fires once, so changes made then would be lost.)
+    let styleReady = false;
+    map.once('load', () => (styleReady = true));
+    const whenReady = (fn: () => void) => (styleReady ? fn() : map.once('load', fn));
     const unsubscribe = useApp.subscribe((now, prev) => {
       if (now.time !== prev.time) writeTimeToUrl(now.time);
       if (now.pin !== prev.pin) {
         pin.setLngLat([now.pin.lng, now.pin.lat]);
         setPinLabel(now.pin.name);
       }
-      const whenReady = (fn: () => void) => (map.isStyleLoaded() ? fn() : map.once('load', fn));
       if (now.base !== prev.base || now.overlays !== prev.overlays) whenReady(applyLayers);
       if (now.imagery !== prev.imagery || now.maptilerKey !== prev.maptilerKey) whenReady(swapImagery);
+      if (now.elevation !== prev.elevation) whenReady(swapElevation);
+      if (now.performance !== prev.performance) map.setPixelRatio(pixelRatio());
     });
 
     function applyLayers() {
@@ -192,6 +213,22 @@ export function MapView() {
       map.removeSource('satellite');
       map.addSource('satellite', satelliteSource(provider, maptilerKey));
       map.addLayer({ id: 'satellite', type: 'raster', source: 'satellite', layout: layer?.layout }, beforeId);
+    }
+
+    function swapElevation() {
+      const p = ELEVATION[useApp.getState().elevation];
+      const style = map.getStyle();
+      const hillshades = style.layers.filter((l) => 'source' in l && l.source === 'dem-hillshade');
+      const next = hillshades.map((l) => style.layers[style.layers.indexOf(l) + 1]?.id);
+      map.setTerrain(null);
+      for (const l of hillshades) map.removeLayer(l.id);
+      map.removeSource('dem-hillshade');
+      map.removeSource('dem-terrain');
+      for (const [id, spec] of Object.entries(demSources(p))) map.addSource(id, spec);
+      // Back to front, so each layer's original neighbour above it is already back.
+      for (let i = hillshades.length - 1; i >= 0; i--) map.addLayer(hillshades[i], next[i]);
+      map.setTerrain({ source: 'dem-terrain', exaggeration: 1 });
+      map.getSource<VectorTileSource>('contours')?.setTiles([CONTOUR_TILES[useApp.getState().elevation]]);
     }
 
     return () => {

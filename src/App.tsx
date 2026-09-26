@@ -21,6 +21,7 @@ import { Inspector } from './ui/Inspector';
 import { ExportDialog } from './ui/ExportDialog';
 import { useTimeline } from './store/timeline';
 import { useApp } from './store/app';
+import { useTheme } from './ui/useTheme';
 
 export function App() {
   // Desktop: a HUD around the map (top bar, forecast, alerts, dock). Phone: compact cards.
@@ -30,6 +31,7 @@ export function App() {
   const lens = useApp((s) => (s.overlays.lens ? s.lensStrength : 0));
   const timeline = useTimeline((s) => s.open);
   const inspecting = useTimeline((s) => s.open && s.selected !== null);
+  useTheme();
   return (
     <div
       className="app"

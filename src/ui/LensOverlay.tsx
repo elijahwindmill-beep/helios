@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../store/app';
+import { PERFORMANCE } from '../map/performance';
 
 // Control windows that get their own tilt-shift: a blur feathering in from their top and bottom edges.
 const WINDOWS = '.top-bar, .forecast, .alerts, .layer-panel, .sun-chart, .tool-dock, .readout-floating, .sun-card, .search-box, .weather-warning';
@@ -54,12 +55,14 @@ function useWindowBands(on: boolean): Band[] {
  */
 export function LensOverlay() {
   const on = useApp((s) => s.overlays.lens && s.lensStrength > 0);
-  const bands = useWindowBands(on);
+  // The blurs over the panels are the costly part; Smooth performance leaves them out.
+  const overPanels = useApp((s) => PERFORMANCE[s.performance].lensOverPanels);
+  const bands = useWindowBands(on && overPanels);
   if (!on) return null;
   return (
     <div className="lens-overlay" aria-hidden="true">
       <div className="lens-vignette" />
-      <div className="lens-edge" />
+      {overPanels && <div className="lens-edge" />}
       {bands.map((b) => (
         <div key={b.key} className="lens-band" data-edge={b.edge} style={{ left: b.left, top: b.top, width: b.width, height: b.height }} />
       ))}

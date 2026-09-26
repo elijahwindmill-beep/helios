@@ -1,12 +1,59 @@
 // Every tile source Helios loads, with its attribution and licence notes.
 // The About panel and README are generated from / kept in sync with this list.
 
-export const TERRARIUM_URL =
-  'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
-/** Terrarium tiles exist to z15, but the Alps data is ~30 m, so z14 already oversamples it. */
-export const TERRAIN_MAXZOOM = 14;
-export const TERRAIN_ATTRIBUTION =
-  'Terrain: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Mapzen Terrain Tiles</a> (AWS Open Data)';
+export type ElevationId = 'mapterhorn' | 'terrarium';
+
+export interface ElevationProvider {
+  id: ElevationId;
+  label: string;
+  note: string;
+  attribution: string;
+  url: string;
+  encoding: 'terrarium';
+  tileSize: 256 | 512;
+  /** Deepest zoom used for the 3D terrain and hillshade. Past local coverage the service 404s and MapLibre keeps the parent tile. */
+  terrainMaxzoom: number;
+  hillshadeMaxzoom: number;
+  contourMaxzoom: number;
+  /** Deepest zoom, in 256 px tile levels, worth loading for the close-up shadow detail; 0 = none. */
+  detailZoom: number;
+}
+
+export const ELEVATION: Record<ElevationId, ElevationProvider> = {
+  mapterhorn: {
+    id: 'mapterhorn',
+    label: 'Detailed (Mapterhorn)',
+    note: 'LiDAR where the region publishes it: South Tyrol 2.5 m, Austria 1 m, Switzerland, Trentino 5 m and more; 30 m (Copernicus) elsewhere.',
+    attribution:
+      'Terrain: <a href="https://mapterhorn.com/attribution" target="_blank" rel="noopener">© Mapterhorn</a> (South Tyrol, BEV, swisstopo, Copernicus and others)',
+    url: 'https://tiles.mapterhorn.com/{z}/{x}/{y}.webp',
+    encoding: 'terrarium',
+    tileSize: 512,
+    terrainMaxzoom: 15,
+    hillshadeMaxzoom: 15,
+    // Contours need every tile: past z12 the service 404s outside LiDAR areas.
+    contourMaxzoom: 12,
+    detailZoom: 16,
+  },
+  terrarium: {
+    id: 'terrarium',
+    label: 'Standard (Mapzen, 30 m)',
+    note: 'About 30 m everywhere. A fallback if the detailed tiles are slow or down.',
+    attribution:
+      'Terrain: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Mapzen Terrain Tiles</a> (AWS Open Data)',
+    url: 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',
+    encoding: 'terrarium',
+    tileSize: 256,
+    // Tiles exist to z15, but the Alps data is ~30 m, so z14 already oversamples it,
+    // and the hillshade turns to blotchy noise past z12.
+    terrainMaxzoom: 14,
+    hillshadeMaxzoom: 12,
+    contourMaxzoom: 13,
+    detailZoom: 0,
+  },
+};
+
+export const ELEVATION_ORDER: ElevationId[] = ['mapterhorn', 'terrarium'];
 
 export const OPENFREEMAP_URL = 'https://tiles.openfreemap.org/planet';
 export const GLYPHS_URL = 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf';
@@ -95,8 +142,14 @@ export const IMAGERY_ORDER: ImageryId[] = ['esri', 'southtyrol', 'eox', 'maptile
 /** Everything that is not imagery, for the About panel and README. */
 export const DATA_SOURCES = [
   {
+    name: 'Mapterhorn terrain tiles',
+    use: 'Detailed elevation for 3D terrain, shadows, contours and hillshade (South Tyrol 2.5 m DGM CC0, BEV Austria 1 m CC BY 4.0, swisstopo, Copernicus GLO-30 and more)',
+    licence: 'Open data from each producer, free incl. commercial with attribution; full list at mapterhorn.com/attribution',
+    url: 'https://mapterhorn.com/attribution',
+  },
+  {
     name: 'Mapzen Terrain Tiles (Terrarium)',
-    use: 'Elevation for 3D terrain, contours and hillshade',
+    use: 'Standard elevation (the fallback choice)',
     licence: 'Mixed open licences, free incl. commercial, attribution required',
     url: 'https://github.com/tilezen/joerd/blob/master/docs/attribution.md',
   },

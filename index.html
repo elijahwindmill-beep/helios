@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Helios · sun and shadow scout</title>
     <meta name="description" content="Scout sun and shadow on real terrain." />
+    <meta name="theme-color" content="#1a1f24" />
+    <script>
+      // The saved light/dark choice before the app loads, so the page doesn't flash.
+      try {
+        const t = JSON.parse(localStorage.getItem('helios.settings') || '{}').state?.theme;
+        const light = t === 'paper' || (t === 'auto' && !matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = light ? 'paper' : 'frost';
+      } catch {}
+    </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

@@ -1,4 +1,4 @@
-import { useApp, type ShadowQuality } from '../store/app';
+import { useApp } from '../store/app';
 import { IMAGERY, IMAGERY_ORDER } from '../map/sources';
 import type { BaseLayer, Overlays } from '../map/style';
 import { CameraReadout } from './CameraReadout';
@@ -9,6 +9,7 @@ import { useSpots } from '../store/spots';
 import { useSunHours } from '../store/sunHours';
 import { HOURS_STOPS } from '../terrain/sunHours';
 import { Logo } from './Logo';
+import { Settings } from './Settings';
 
 const BASES: Array<{ id: BaseLayer; label: string }> = [
   { id: 'satellite', label: 'Satellite' },
@@ -32,11 +33,6 @@ const OVERLAYS: Array<{ id: keyof Overlays; label: string; swatch: string }> = [
   { id: 'lens', label: 'Lens look', swatch: 'radial-gradient(circle, #f4f6f8 20%, #5b8def 60%, #e4572e)' },
 ];
 
-const QUALITIES: Array<{ id: ShadowQuality; label: string }> = [
-  { id: 'low', label: 'Low' },
-  { id: 'medium', label: 'Medium' },
-  { id: 'high', label: 'High' },
-];
 
 const COMMERCIAL_TEXT = { ok: 'OK for paid work', check: 'Check terms for paid work', no: 'Not for paid work' };
 
@@ -45,12 +41,11 @@ export function LayerPanel() {
   const overlays = useApp((s) => s.overlays);
   const imagery = useApp((s) => s.imagery);
   const maptilerKey = useApp((s) => s.maptilerKey);
-  const quality = useApp((s) => s.shadowQuality);
   const lensStrength = useApp((s) => s.lensStrength);
   const spotStatus = useSpots((s) => s.status);
   const hours = useSunHours();
   const status = useApp((s) => s.shadowStatus);
-  const { setBase, toggleOverlay, setImagery, setMaptilerKey, setAboutOpen, setShadowQuality } = useApp.getState();
+  const { setBase, toggleOverlay, setImagery, setMaptilerKey, setAboutOpen } = useApp.getState();
   const provider = IMAGERY[imagery];
   const narrow = useNarrow();
   const readoutInPanel = useReadoutInPanel();
@@ -173,13 +168,6 @@ export function LayerPanel() {
 
       {overlays.shadows && (
         <div className="shadow-settings">
-          <div className="segmented segmented-small" role="group" aria-label="Shadow quality">
-            {QUALITIES.map((q) => (
-              <button key={q.id} aria-pressed={quality === q.id} onClick={() => setShadowQuality(q.id)}>
-                {q.label}
-              </button>
-            ))}
-          </div>
           <p className={`shadow-status${status.state === 'error' ? ' shadow-status-error' : ''}`} role="status">
             {status.state === 'loading' && 'Loading elevation for shadows…'}
             {status.state === 'error' && `Shadows unavailable: ${status.message}`}
@@ -196,6 +184,8 @@ export function LayerPanel() {
           <CameraReadout inline />
         </>
       )}
+
+      <Settings />
 
       <button className="link-button" onClick={() => setAboutOpen(true)}>
         About, sources and licences
