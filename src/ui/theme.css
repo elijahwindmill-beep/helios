@@ -1058,3 +1058,11 @@ button {
     animation: none;
   }
 }
+
+/* Sun scene overlay (compass ring, sun paths, sun): drawn over the map, under the pin. */
+.sun-scene {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}

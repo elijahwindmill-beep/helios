@@ -12,8 +12,8 @@ Default location: Seceda ridgeline, Val Gardena (46.60068, 11.72598).
 |---|---|---|
 | 1 | 3D terrain, Satellite / Paper / Terrain bases, mouse controls, camera readout, search | Done |
 | 2 | Sun position, cast terrain shadows, time and date sliders, sun-arc scrubber | Done |
-| 3 | Compass ring, sun paths, solstice paths, draggable sun | Next (after the mobile task) |
-| 4 | Routes (GPX/KML/GeoJSON), places, geotagged photos | |
+| 3 | Compass ring, sun paths, solstice paths, draggable sun | Done |
+| 4 | Routes (GPX/KML/GeoJSON), places, geotagged photos | Next (after the white-balance task) |
 | 5 | Keyframes, clips, timeline, playback, video export | |
 | 6 | Alpenglow dark theme, sun-hours heatmap, South Tyrol LiDAR, extras | |
 
@@ -30,7 +30,7 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
      - 2 fingers: pinch to move the camera closer or further, twist to rotate.
      - 3 fingers drag: orbit (up/down tilts, left/right rotates).
    - Tutorial overlay on first visit that shows the 1, 2 and 3 finger gestures, with a cross (×) button to close it. Once closed it stays closed, and a "?" button brings it back.
-2. **Real-world light colour (white balance) through the day** (after the mobile task, requested 26 Sep 2026)
+2. **Real-world light colour (white balance) through the day** (after phase 3, requested 26 Sep 2026)
    - As the sun nears the horizon the whole scene warms like real light: neutral daylight (about 5500 K) at high sun, warming through golden hour (sun below about 6°) to deep orange at sunset, then the cool blue of blue hour (sun 4° to 6° below the horizon) and dark night after that.
    - Driven by the real sun elevation at the pin, so it follows the time and date sliders, the arc and (later) keyframed clips.
    - Sunlit ground takes the warm sun colour, shadows take the cooler sky-blue fill, and the sky and horizon haze change with it.
@@ -58,6 +58,13 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 - **Sun arc** (bottom): drag or click the sun along the arc to change the time. When it has keyboard focus, arrow keys step 5 minutes (Shift: 30), Home and End jump to sunrise and sunset.
 - **Cast shadows** (layer panel) shows where the terrain blocks the sun. Quality: Low, Medium (default), High. High loads more detailed elevation and takes longer to draw.
 - The relief shading on Paper and Terrain is lit from the real sun direction too.
+
+### Sun in 3D
+
+- Around the pin: a **compass ring** (ticks every 10°, N/E/S/W), today's **sun path** in amber with sunrise and sunset badges where it meets the horizon, the **solstice** paths (dashed) and the **equinox** path (dotted). Each has its own switch in the layer panel.
+- The **sun** sits on its path with a line down to the pin, its elevation (△) and its azimuth on the ring.
+- **Drag the sun** along its path to change the time. Hold **Shift** while dragging to move it anywhere in the sky: Helios finds the date and time when the sun is there. Dragging it onto a solstice or equinox path jumps to that day.
+- The ring badges show when the sun centre crosses a flat horizon (like Shadowmap's badges), so they are a few minutes inside the sunrise/sunset times in the sun card.
 - The time is part of the page link (`&t=…` in UTC), so a shared link opens at the same moment.
 
 ### On a phone
@@ -132,7 +139,8 @@ Libraries: MapLibre GL JS (BSD-3), maplibre-contour (BSD-3), React (MIT), Zustan
 ```
 src/
   map/     MapLibre setup, style and base layers, camera controls, tile sources, shadow layer
-  sun/     sun position, sunrise and sunset, seasons, timezones
+  scene/   3D sun scene: compass ring, sun paths, sun, labels, dragging
+  sun/     sun position, sunrise and sunset, seasons, timezones, inverse solver for dragging
   terrain/ elevation tiles, height mosaic, shadow ray-march (CPU reference and GPU shader)
   store/   app state (Zustand), saved in the browser
   ui/      panels, search, readout, theme

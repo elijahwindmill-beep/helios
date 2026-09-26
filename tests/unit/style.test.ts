@@ -3,7 +3,7 @@ import { buildStyle, layerVisibility } from '../../src/map/style';
 import { IMAGERY } from '../../src/map/sources';
 
 describe('base layers', () => {
-  const all = { shadows: true, contours: true, labels: true };
+  const all = { shadows: true, sunPath: true, solstices: true, compass: true, contours: true, labels: true };
 
   it('shows exactly one base at a time', () => {
     const sat = layerVisibility('satellite', all);
@@ -22,7 +22,7 @@ describe('base layers', () => {
   });
 
   it('overlays toggle independently of the base', () => {
-    const v = layerVisibility('satellite', { shadows: true, contours: false, labels: true });
+    const v = layerVisibility('satellite', { ...all, contours: false });
     expect(v['contour-minor']).toBe(false);
     expect(v['contour-major']).toBe(false);
     expect(v['label-peak']).toBe(true);

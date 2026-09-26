@@ -15,6 +15,10 @@ import {
 export type BaseLayer = 'satellite' | 'paper' | 'terrain';
 export interface Overlays {
   shadows: boolean;
+  /** Drawn by the sun scene (scene/sunScene.ts), not by map layers. */
+  sunPath: boolean;
+  solstices: boolean;
+  compass: boolean;
   contours: boolean;
   labels: boolean;
 }

@@ -50,7 +50,14 @@ interface AppState {
   closeTutorial(): void;
 }
 
-const DEFAULT_OVERLAYS: Overlays = { shadows: true, contours: true, labels: true };
+const DEFAULT_OVERLAYS: Overlays = {
+  shadows: true,
+  sunPath: true,
+  solstices: true,
+  compass: true,
+  contours: true,
+  labels: true,
+};
 
 export const useApp = create<AppState>()(
   persist(

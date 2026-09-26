@@ -11,6 +11,7 @@ import { installTouchControls } from './touchControls';
 import { readCamera } from './camera';
 import { setMap } from './mapInstance';
 import { installShadowLayer } from './shadowLayer';
+import { installSunScene } from '../scene/sunScene';
 import { writeTimeToUrl } from '../store/urlTime';
 import { COMPACT_QUERY } from '../ui/useMedia';
 
@@ -34,6 +35,18 @@ const CONTOUR_TILES = demSource.contourProtocolUrl({
   contourLayer: 'contours',
 });
 
+/**
+ * The view in the page link (#map=zoom/lat/lng/bearing/pitch), read once at startup.
+ * MapLibre reads it too, but removing a map (React StrictMode mounts twice in dev) also
+ * deletes it from the URL, so the second map would lose it.
+ */
+const LINKED_VIEW = (() => {
+  const v = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('map');
+  const n = v?.split('/').map(Number);
+  if (!n || n.length < 3 || n.some((x) => !Number.isFinite(x))) return null;
+  return { zoom: n[0], center: [n[2], n[1]] as [number, number], bearing: n[3] ?? 0, pitch: n[4] ?? 0 };
+})();
+
 function makePinElement(): HTMLElement {
   const el = document.createElement('div');
   el.className = 'pin';
@@ -56,6 +69,7 @@ export function MapView() {
         contourTilesUrl: CONTOUR_TILES,
       }),
       ...INITIAL_VIEW,
+      ...LINKED_VIEW,
       maxPitch: 85,
       hash: 'map',
       attributionControl: { compact: true },
@@ -116,8 +130,10 @@ export function MapView() {
     });
 
     let removeShadows = () => {};
+    let removeScene = () => {};
     map.once('load', () => {
       removeShadows = installShadowLayer(map, 'contour-minor');
+      removeScene = installSunScene(map);
     });
     writeTimeToUrl(s.time);
 
@@ -161,6 +177,7 @@ export function MapView() {
     return () => {
       unsubscribe();
       removeShadows();
+      removeScene();
       removeControls();
       cancelAnimationFrame(raf);
       setMap(null);
