@@ -6,7 +6,7 @@ import { useTimeline } from '../store/timeline';
 import { getMap } from '../map/mapInstance';
 import { shadowsBusy } from '../map/shadowLayer';
 import { clipDuration } from './model';
-import { applyFrame, fillPivotHeights, frameAt, seek } from './runtime';
+import { applyFrame, ensureLift, fillPivotHeights, frameAt, seek } from './runtime';
 
 /**
  * Video export, one frame at a time: for every frame the clip is set to that exact moment,
@@ -189,6 +189,8 @@ export async function runExport() {
   Object.assign(container.style, { position: 'fixed', width: `${cssW}px`, height: `${cssH}px`, left: `${(innerWidth - cssW) / 2}px`, top: `${(innerHeight - cssH) / 2}px`, right: 'auto', bottom: 'auto' });
   map.setPixelRatio(width / cssW);
   map.resize();
+  // Terrain clearance for the export's own map size.
+  await ensureLift();
 
   const out = document.createElement('canvas');
   out.width = width;

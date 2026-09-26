@@ -7,6 +7,7 @@ import { timeZoneAt } from '../sun/timezone';
 import type { Overlays } from '../map/style';
 import { clipDuration, type CameraKey, type Keyframe } from './model';
 import { evaluate, type Frame } from './interpolate';
+import { computeLift, liftAt, type Lift } from './clearance';
 import { EASY_EASE } from './eases';
 
 /** The current view and sun, as a keyframe's content. */
@@ -60,7 +61,31 @@ export function applyFrame(frame: Frame) {
 
 export function frameAt(t: number): Frame | null {
   const { pin } = useApp.getState();
-  return evaluate(useTimeline.getState().activeClip(), t, timeZoneAt(pin.lat, pin.lng));
+  const clip = useTimeline.getState().activeClip();
+  const f = evaluate(clip, t, timeZoneAt(pin.lat, pin.lng));
+  // Raised where the path would run into the ground (timeline/clearance.ts).
+  if (f && f.camera.elevation !== undefined && lift && lift.clip === clip && lift.viewportHeight === getMap()?.getCanvas().clientHeight) {
+    f.camera.elevation += liftAt(lift, t);
+  }
+  return f;
+}
+
+let lift: Lift | null = null;
+let lifting: Promise<void> | null = null;
+/** Makes sure the terrain clearance for the active clip (at this map size) is worked out. */
+export function ensureLift(): Promise<void> {
+  const map = getMap();
+  const clip = useTimeline.getState().activeClip();
+  if (!map || clip.keyframes.length < 2) return Promise.resolve();
+  const vh = map.getCanvas().clientHeight;
+  if (lift && lift.clip === clip && lift.viewportHeight === vh) return Promise.resolve();
+  const { pin } = useApp.getState();
+  const job = computeLift(clip, timeZoneAt(pin.lat, pin.lng), map.getVerticalFieldOfView(), vh).then((l) => {
+    lift = l;
+    if (lifting === job) lifting = null;
+  });
+  lifting = job;
+  return job;
 }
 
 /**
@@ -80,8 +105,19 @@ export function fillPivotHeights() {
 
 /** Moves the playhead and shows that moment. */
 export function seek(t: number) {
-  if (!useTimeline.getState().playing && useTimeline.getState().activeClip().keyframes.some((k) => k.camera.elevation === undefined)) fillPivotHeights();
-  useTimeline.getState().setPlayhead(t);
+  const tl = useTimeline.getState();
+  if (!tl.playing) {
+    if (tl.activeClip().keyframes.some((k) => k.camera.elevation === undefined)) fillPivotHeights();
+    // Scrubbing: work out the clearance in the background, then show this moment with it.
+    const before = lift;
+    void ensureLift().then(() => {
+      if (lift !== before && !useTimeline.getState().playing && useTimeline.getState().playhead === t) {
+        const f = frameAt(t);
+        if (f) applyFrame(f);
+      }
+    });
+  }
+  tl.setPlayhead(t);
   const f = frameAt(t);
   if (f) applyFrame(f);
 }
@@ -94,9 +130,17 @@ export function startPlayback() {
   if (tl.activeClip().keyframes.length < 2) return;
   fillPivotHeights();
   const from = tl.playhead >= duration ? 0 : tl.playhead;
-  let start = performance.now() - from * 1000;
   tl.setPlaying(true);
   cancelAnimationFrame(raf);
+  // Check the path against the terrain first (a moment, once per edit), then play.
+  void ensureLift().then(() => {
+    if (!useTimeline.getState().playing) return;
+    run(from, duration);
+  });
+}
+
+function run(from: number, duration: number) {
+  let start = performance.now() - from * 1000;
   const tick = (now: number) => {
     const s = useTimeline.getState();
     if (!s.playing) return;

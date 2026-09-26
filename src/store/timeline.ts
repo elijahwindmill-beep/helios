@@ -158,3 +158,6 @@ export const useTimeline = create<TimelineState>()(
 );
 
 export const activeDuration = () => clipDuration(useTimeline.getState().activeClip());
+
+// Handy for driving the timeline from the browser console during development.
+if (import.meta.env.DEV) (window as unknown as { __timeline: typeof useTimeline }).__timeline = useTimeline;
