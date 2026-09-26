@@ -214,6 +214,8 @@ export async function runExport() {
       if (f) applyFrame(f);
       await settle(map);
       compose(ctx, map, i, width / cssW, noise, tmp);
+      // Development only: lets a test look at each finished frame.
+      if (import.meta.env.DEV) (window as unknown as { __exportProbe?: (c: HTMLCanvasElement, i: number) => void }).__exportProbe?.(out, i);
       await source.add(i / fps, 1 / fps);
       useExport.setState({ frame: i + 1 });
     }

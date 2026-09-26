@@ -81,6 +81,21 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
   let thin: TileRange[] = [];
   let frame = 0;
   const pauses = new Map<string, () => void>();
+  // Renders still to come after a shadow image moved: the 3D terrain drapes from a cache that
+  // can lag a frame behind, so the video export waits these out before taking a frame.
+  let swapRenders = 0;
+  const countSwap = () => {
+    if (swapRenders > 0) swapRenders--;
+  };
+  map.on('render', countSwap);
+  /** Moves a shadow image. Always after its canvas holds the picture for the new place. */
+  const place = (id: string, canvas: HTMLCanvasElement, m: Mosaic) => {
+    const source = map.getSource<CanvasSource>(id);
+    if (source) source.setCoordinates(corners(m));
+    else addLayer(id, canvas, m);
+    swapRenders = 3;
+    map.triggerRepaint();
+  };
 
   const corners = (r: TileRange): [[number, number], [number, number], [number, number], [number, number]] => {
     const b = rangeBounds(r);
@@ -139,7 +154,7 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
     let ms = 0;
     const close = detail && perf.detail ? detail : null;
     if (close) {
-      ms += renderer.render({ ...common, steps: perf.detail!.steps, detail: true });
+      ms += renderer.render({ ...common, steps: perf.detail!.steps, detail: true, wideSteps: perf.shadows.steps });
       renderer.copyTo(detailCanvas);
       refreshSource(DETAIL_SOURCE);
     }
@@ -202,6 +217,7 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
     detailCanvas.width = detailCanvas.height = 1;
     detailCanvas.getContext('2d')!.clearRect(0, 0, 1, 1);
     refreshSource(DETAIL_SOURCE);
+    swapRenders = 3;
     requestDraw();
   };
 
@@ -219,7 +235,7 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
       const build = intersect(tileRangeFor(box, z), mosaic);
       if (build.x1 < build.x0 || build.y1 < build.y0) return null;
       if (build.x1 - build.x0 >= maxTiles || build.y1 - build.y0 >= maxTiles) continue;
-      const need = intersect(tileRangeFor(clampBounds(viewBounds(), center, budget.halfSize * 0.6), z), build);
+      const need = intersect(tileRangeFor(clampBounds(viewBounds(), center, budget.halfSize * 0.4), z), build);
       if (thin.some((t) => rangeContains(t, need))) continue;
       return { build, need };
     }
@@ -248,10 +264,11 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
       if (!mosaic || !inside(next, mosaic)) return;
       detail = next;
       renderer.setDetail(next);
-      const source = map.getSource<CanvasSource>(DETAIL_SOURCE);
-      if (source) source.setCoordinates(corners(next));
-      else addLayer(DETAIL_SOURCE, detailCanvas, next);
-      requestDraw();
+      // Paint the new close-up (and the wide pass with its new hole) first, then move the image
+      // there in the same moment: never the old picture in the new place, even for a frame.
+      cancelAnimationFrame(frame);
+      draw();
+      place(DETAIL_SOURCE, detailCanvas, next);
     } catch {
       // The close-up is optional; the wide shadows still show.
       if (!abort.signal.aborted) detailLoading = null;
@@ -287,12 +304,11 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
       renderer.setMosaic(next);
       hoursMosaic = null;
       if (detail && !inside(detail, next)) clearDetail();
-      const source = map.getSource<CanvasSource>(SOURCE);
-      if (source) source.setCoordinates(corners(next));
-      else addLayer(SOURCE, wideCanvas, next);
       loading = null;
       useApp.getState().setShadowStatus({ state: 'idle' });
+      cancelAnimationFrame(frame);
       draw();
+      place(SOURCE, wideCanvas, next);
       scheduleHours();
       void refreshDetail();
     } catch (err) {
@@ -422,7 +438,7 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
     const o = useApp.getState().overlays;
     return (
       (o.shadows || o.sunHours) &&
-      (moveTimer !== 0 || loading !== null || detailLoading !== null || frame !== 0 || pauses.size > 0 || hoursTimer !== 0 || useSunHours.getState().state === 'working')
+      (moveTimer !== 0 || loading !== null || detailLoading !== null || frame !== 0 || pauses.size > 0 || swapRenders > 0 || hoursTimer !== 0 || useSunHours.getState().state === 'working')
     );
   };
   map.on('moveend', onMoveEnd);
@@ -473,6 +489,7 @@ export function installShadowLayer(map: MlMap, beforeLayer: string): () => void 
     hoursJob++;
     cancelAnimationFrame(frame);
     for (const onRender of pauses.values()) map.off('render', onRender);
+    map.off('render', countSwap);
     loading?.abort.abort();
     detailLoading?.abort.abort();
   };

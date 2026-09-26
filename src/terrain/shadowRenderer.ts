@@ -34,6 +34,12 @@ uniform float uWorldTiles;
 uniform float uMppEquator;
 uniform vec3 uColor;
 uniform float uStrength;
+// Close-up pass only: the rim width (wide-grid pixels) over which it fades into the wide pass,
+// and the wide pass's own march settings for that.
+uniform float uBlend;
+uniform float uWideFirst;
+uniform float uWideGrowth;
+uniform int uWideSteps;
 out vec4 outColor;
 
 const float PI = 3.141592653589793;
@@ -52,12 +58,29 @@ float sampleGrid(sampler2D tex, vec2 size, vec2 p) {
   return mix(mix(h00, h10, t.x), mix(h01, h11, t.x), t.y);
 }
 
-float heightAt(vec2 p) {
-  if (uHasFine) {
+float heightAt(vec2 p, bool fine) {
+  if (fine && uHasFine) {
     vec2 f = (p - uFineOrigin) * uFineScale;
     if (f.x >= 0.5 && f.y >= 0.5 && f.x <= uFineSize.x - 0.5 && f.y <= uFineSize.y - 0.5) return sampleGrid(uFine, uFineSize, f);
   }
   return sampleGrid(uDem, uDemSize, p);
+}
+
+/** 0 in full sun … 1 in full shadow: walk toward the sun, track the steepest rise. */
+float shade(vec2 p, float mpp, bool fine, float first, float growth, int steps) {
+  float h0 = heightAt(p, fine);
+  float best = -1e9;
+  float d = first;
+  for (int i = 0; i < 1024; i++) {
+    if (i >= steps || d > uMaxDist) break;
+    vec2 q = p + uDir * d;
+    if (q.x < 0.0 || q.y < 0.0 || q.x > uDemSize.x || q.y > uDemSize.y) break;
+    float dm = d * mpp;
+    float hq = heightAt(q, fine) - dm * dm * uCurvature;
+    best = max(best, (hq - h0) / dm);
+    d *= growth;
+  }
+  return smoothstep(-uPenumbra, uPenumbra, best - uTanEl);
 }
 
 void main() {
@@ -73,19 +96,14 @@ void main() {
 
   float shadow = 1.0;
   if (uTanEl > 0.0) {
-    float h0 = heightAt(p);
-    float best = -1e9;
-    float d = uFirst;
-    for (int i = 0; i < 1024; i++) {
-      if (i >= uSteps || d > uMaxDist) break;
-      vec2 q = p + uDir * d;
-      if (q.x < 0.0 || q.y < 0.0 || q.x > uDemSize.x || q.y > uDemSize.y) break;
-      float dm = d * mpp;
-      float hq = heightAt(q) - dm * dm * uCurvature;
-      best = max(best, (hq - h0) / dm);
-      d *= uGrowth;
+    shadow = shade(p, mpp, true, uFirst, uGrowth, uSteps);
+    // Close-up pass: fade into exactly what the wide pass draws toward the rim, so the edge
+    // between them never shows (nor jumps when the close-up area moves).
+    if (uBlend > 0.0) {
+      vec2 inset = min(p - uArea.xy, uArea.xy + uArea.zw - p);
+      float w = smoothstep(0.0, uBlend, min(inset.x, inset.y));
+      if (w < 1.0) shadow = mix(shade(p, mpp, false, uWideFirst, uWideGrowth, uWideSteps), shadow, w);
     }
-    shadow = smoothstep(-uPenumbra, uPenumbra, best - uTanEl);
   }
   float a = shadow * uStrength;
   outColor = vec4(uColor * a, a);
@@ -115,6 +133,8 @@ export interface ShadowRenderParams {
   detail?: boolean;
   /** Tiles of the wide grid to leave empty because the close-up layer covers them. */
   hole?: TileRange | null;
+  /** Close-up pass: the wide pass's steps, to fade into it at the rim. */
+  wideSteps?: number;
 }
 
 export class ShadowRenderer {
@@ -260,6 +280,14 @@ export class ShadowRenderer {
     gl.uniform1f(this.u('uMppEquator'), mppEquator);
     gl.uniform3f(this.u('uColor'), ...p.color);
     gl.uniform1f(this.u('uStrength'), p.strength);
+    if (d) {
+      const wide: MarchSettings = { steps: p.wideSteps ?? p.steps, firstStep: 0.7, maxDistance };
+      // Fade over the outer 12 % of the close-up area.
+      gl.uniform1f(this.u('uBlend'), 0.12 * Math.min(area[2], area[3]));
+      gl.uniform1f(this.u('uWideFirst'), wide.firstStep);
+      gl.uniform1f(this.u('uWideGrowth'), stepGrowth(wide));
+      gl.uniform1i(this.u('uWideSteps'), wide.steps);
+    } else gl.uniform1f(this.u('uBlend'), 0);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
