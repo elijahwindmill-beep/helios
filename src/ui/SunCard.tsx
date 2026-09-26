@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { useNarrow } from './useMedia';
 import { useApp } from '../store/app';
 import { useSun } from '../sun/useSun';
 import { seasons } from '../sun/times';
@@ -49,6 +50,9 @@ export function SunCard() {
   };
 
   const below = position.elevation < 0;
+  const narrow = useNarrow();
+  const [expanded, setExpanded] = useState(false);
+  const showDetails = !narrow || expanded;
 
   return (
     <section className="panel sun-card" aria-label="Sun and time">
@@ -58,8 +62,28 @@ export function SunCard() {
           <span className="sun-offset mono">{formatOffset(offset)}</span>
         </div>
         <span className="sun-date">{formatDate(time, timeZone)}</span>
+        {narrow && (
+          <button
+            className="icon-button sun-expand"
+            aria-expanded={expanded}
+            aria-label={expanded ? 'Hide sun details' : 'Show sun details and date'}
+            onClick={() => setExpanded(!expanded)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: expanded ? 'rotate(180deg)' : undefined }}>
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        )}
       </div>
+      {narrow && !expanded && (
+        <p className="sun-summary mono">
+          {position.elevation.toFixed(1)}° · {position.azimuth.toFixed(1)}° · ↑{day.sunrise !== null ? formatClock(day.sunrise, timeZone) : '–'} ↓
+          {day.sunset !== null ? formatClock(day.sunset, timeZone) : '–'}
+        </p>
+      )}
 
+      {showDetails && (
+      <>
       <dl className="sun-stats">
         <div>
           <dt>Elevation</dt>
@@ -141,6 +165,8 @@ export function SunCard() {
           ))}
         </span>
       </div>
+      </>
+      )}
     </section>
   );
 }

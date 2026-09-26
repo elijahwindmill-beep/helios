@@ -303,7 +303,7 @@ button {
 }
 
 /* ---------- Camera readout ---------- */
-.readout {
+.readout-floating {
   position: absolute;
   left: 24px;
   bottom: 24px;
@@ -418,34 +418,6 @@ button {
 .maplibregl-ctrl-attrib {
   font-family: var(--font-ui);
   font-size: 11px;
-}
-
-/* Narrow screens: stack panels so nothing overflows. */
-@media (max-width: 760px) {
-  .layer-panel {
-    left: 16px;
-    right: 16px;
-    top: auto;
-    bottom: 96px;
-    width: auto;
-    max-height: 40%;
-  }
-  .search {
-    left: 16px;
-    top: 16px;
-    width: calc(100% - 32px);
-  }
-  .map-buttons {
-    right: 16px;
-    top: 80px;
-    transform: none;
-  }
-  .readout {
-    left: 16px;
-    right: 16px;
-    bottom: 16px;
-    overflow-x: auto;
-  }
 }
 
 /* ---------- Sun card (top right) ---------- */
@@ -725,5 +697,254 @@ button {
     bottom: 104px;
     transform: none;
     width: 360px;
+  }
+}
+
+/* ---------- Tutorial overlay ---------- */
+.tutorial {
+  width: min(760px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  padding: 0;
+  color: var(--ink);
+  overflow: auto;
+}
+.tutorial::backdrop {
+  background: rgba(31, 29, 26, 0.45);
+}
+.tutorial-inner {
+  position: relative;
+  padding: 24px;
+}
+.tutorial-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  box-shadow: none;
+}
+.tutorial .title {
+  margin: 0 56px 16px 0;
+}
+.tutorial-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.tutorial-steps li {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tutorial-art {
+  background: var(--surface-sunk);
+  border-radius: 12px;
+  padding: 8px;
+}
+.tutorial-art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.tutorial-steps h3 {
+  margin: 0 0 2px;
+  font-size: 15px;
+}
+.tutorial-steps p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.tutorial-foot {
+  font-size: 13px;
+  margin: 16px 0;
+}
+.tutorial-ok {
+  min-width: 120px;
+  height: 44px;
+}
+.tut-dot {
+  fill: var(--accent);
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+.tut-arrow {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.tut-head {
+  fill: var(--ink-2);
+}
+.tut-mouse {
+  fill: var(--surface);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+.tut-mouse-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+/* ---------- Show/hide by screen width ---------- */
+.narrow-only {
+  display: none !important;
+}
+.readout-inline {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin-bottom: 8px;
+}
+.readout-inline .readout-field input {
+  width: 100%;
+  height: 32px;
+  font-size: 14px;
+}
+
+/* ---------- Phones (portrait) ----------
+   Map fills the screen. Top: search, then a one-line sun summary (tap to expand).
+   Bottom: the sun arc as the main time control. Layers open as a bottom sheet. */
+@media (max-width: 760px) {
+  .app {
+    --gutter: 16px;
+    /* The arc scales with the screen width (viewBox 440 x 124) plus its padding. */
+    --arc-h: calc((100vw - 32px) * 124 / 440 + 8px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .narrow-only {
+    display: flex !important;
+  }
+  .wide-only {
+    display: none !important;
+  }
+  .search {
+    left: var(--gutter);
+    right: var(--gutter);
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    width: auto;
+  }
+  .search-box {
+    height: 48px;
+  }
+  .sun-card {
+    left: var(--gutter);
+    right: var(--gutter);
+    top: calc(68px + env(safe-area-inset-top, 0px));
+    width: auto;
+    max-height: calc(100dvh - 68px - var(--arc-h) - 48px);
+    overflow-y: auto;
+    padding: 8px 8px 8px 14px;
+  }
+  .sun-card-top {
+    align-items: center;
+    gap: 8px;
+  }
+  .sun-date {
+    margin-left: auto;
+  }
+  .sun-clock {
+    font-size: 24px;
+  }
+  .sun-expand {
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  .sun-summary {
+    margin: -4px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .sun-card .slider-row {
+    height: 44px;
+  }
+  .sun-actions {
+    flex-wrap: wrap;
+    padding-right: 6px;
+  }
+  .sun-arc {
+    left: var(--gutter);
+    right: var(--gutter);
+    bottom: calc(12px + var(--safe-bottom));
+    width: auto;
+    transform: none;
+  }
+  .map-buttons {
+    right: var(--gutter);
+    top: auto;
+    bottom: calc(var(--arc-h) + 28px + var(--safe-bottom));
+    transform: none;
+  }
+  .readout-floating {
+    display: none;
+  }
+  /* Attribution: bottom-left, above the arc, clear of the map buttons on the right. */
+  .maplibregl-ctrl-bottom-right {
+    right: auto;
+    left: 6px;
+    bottom: calc(var(--arc-h) + 20px + var(--safe-bottom));
+  }
+  /* Layer panel becomes a bottom sheet. */
+  .layer-panel {
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    width: auto;
+    max-height: 78dvh;
+    padding: 20px var(--gutter) calc(16px + var(--safe-bottom));
+    border-radius: 20px 20px 0 0;
+    border-bottom: 0;
+    box-shadow: 0 -8px 24px rgba(31, 29, 26, 0.18);
+    z-index: 5;
+    animation: sheet-up 180ms ease-out;
+  }
+  .layer-panel[hidden] {
+    display: none;
+  }
+  .sheet-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    box-shadow: none;
+  }
+  .segmented button,
+  .toggle,
+  .field select,
+  .field input {
+    min-height: 44px;
+  }
+  .tutorial-steps {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .tutorial-steps li {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+  }
+  .tutorial-art {
+    flex: 0 0 104px;
+  }
+  .tutorial-inner {
+    padding: 20px;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layer-panel {
+    animation: none;
   }
 }

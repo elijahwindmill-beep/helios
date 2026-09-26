@@ -23,7 +23,7 @@ The full build brief is in [PROMPT.md](PROMPT.md).
 
 Extra tasks, in the order they'll be built. Each runs after the phase it names.
 
-1. **Mobile layout and touch controls** (after phase 2, requested 26 Sep 2026)
+1. ~~**Mobile layout and touch controls**~~ Done 26 Sep 2026 (see "On a phone" below).
    - Layout fitted to portrait phone screens: map full screen, panels collapse into a bottom sheet, readout and attribution never overlap, all touch targets at least 44 px.
    - Touch gestures, matching the mouse controls:
      - 1 finger drag: pan. Double-tap: move the pin.
@@ -59,6 +59,17 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 - **Cast shadows** (layer panel) shows where the terrain blocks the sun. Quality: Low, Medium (default), High. High loads more detailed elevation and takes longer to draw.
 - The relief shading on Paper and Terrain is lit from the real sun direction too.
 - The time is part of the page link (`&t=…` in UTC), so a shared link opens at the same moment.
+
+### On a phone
+
+| Gesture | To |
+|---|---|
+| 1 finger drag | Pan |
+| Double-tap | Move the pin |
+| 2 fingers: pinch / twist | Move closer or further / turn the view |
+| 3 fingers drag | Orbit: up/down tilts, left/right turns |
+
+The map fills the screen. The sun summary sits under the search bar (tap the arrow for the sliders), the sun arc is at the bottom, and the layers button opens the layer panel and camera readout as a sheet. A short tutorial shows the gestures on the first visit; the **?** button brings it back (on a computer it shows the mouse controls).
 
 The readout in the bottom-left shows the view centre (lat, lng), the camera's height above the ground under it, bearing and pitch. Click any value, type a new one and press Enter (heights accept `850`, `850 m` or `1.2 km`).
 

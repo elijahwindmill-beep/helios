@@ -38,13 +38,13 @@ function apply(field: Field, value: number) {
 }
 
 /** Live camera readout. Click a value to type a new one; Enter applies, Escape cancels. */
-export function CameraReadout() {
+export function CameraReadout({ inline = false }: { inline?: boolean }) {
   const camera = useApp((s) => s.camera);
   const [editing, setEditing] = useState<{ field: Field; text: string } | null>(null);
   if (!camera) return null;
 
   return (
-    <div className="panel readout" aria-label="Camera">
+    <div className={inline ? 'readout readout-inline' : 'panel readout readout-floating'} aria-label="Camera">
       {FIELDS.map((f) => {
         const isEditing = editing?.field === f.id;
         return (
