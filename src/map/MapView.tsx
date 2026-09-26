@@ -13,6 +13,7 @@ import { readCamera } from './camera';
 import { setMap } from './mapInstance';
 import { installShadowLayer } from './shadowLayer';
 import { installGoogle3d } from './google3d';
+import { installSteadyCamera } from './steadyCamera';
 import { installSunScene } from '../scene/sunScene';
 import { installLightColour } from '../scene/lightColour';
 import { installUserLayers } from '../layers/userLayers';
@@ -161,7 +162,9 @@ export function MapView() {
     let removeLens = () => {};
     let removeSpots = () => {};
     let removeGoogle = () => {};
+    let removeSteady = () => {};
     map.once('load', () => {
+      removeSteady = installSteadyCamera(map);
       removeShadows = installShadowLayer(map, 'contour-minor');
       // Under the labels so they keep their colour.
       removeLight = installLightColour(map, 'contour-label');
@@ -244,6 +247,7 @@ export function MapView() {
       removeLens();
       removeSpots();
       removeGoogle();
+      removeSteady();
       removeControls();
       cancelAnimationFrame(raf);
       setMap(null);

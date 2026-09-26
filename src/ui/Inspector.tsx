@@ -24,6 +24,7 @@ export function Inspector() {
   const clip = useTimeline((s) => s.project.clips.find((c) => c.id === s.project.activeClip) ?? s.project.clips[0]);
   const clipboard = useTimeline((s) => s.easeClipboard);
   const [sunTab, setEditSun] = useState(false);
+  const [tab, setTab] = useState<'ease' | 'key'>('ease');
   const { timeZone } = useSun();
   const TL = useTimeline.getState();
   const i = clip.keyframes.findIndex((k) => k.id === selected);
@@ -64,6 +65,53 @@ export function Inspector() {
         <TypedField className="hud-value insp-at" label="Keyframe time, seconds" hint="Seconds from the clip start" value={timecode(k.t)} apply={(s) => applyAt(s.includes(':') ? String(Number(s.split(':')[0]) * 60 + Number(s.split(':')[1])) : s)} />
       </div>
 
+      <div className="segmented segmented-small insp-tabs" role="tablist" aria-label="Keyframe settings">
+        <button role="tab" aria-selected={tab === 'ease'} aria-pressed={tab === 'ease'} onClick={() => setTab('ease')}>
+          Ease
+        </button>
+        <button role="tab" aria-selected={tab === 'key'} aria-pressed={tab === 'key'} onClick={() => setTab('key')}>
+          Sun &amp; camera
+        </button>
+      </div>
+
+      {tab === 'ease' &&
+        (isLast ? (
+          <p className="insp-note">The last keyframe has no ease after it. Select an earlier keyframe, or add one after this.</p>
+        ) : (
+          <>
+          <div className="insp-ease-head">
+            <h3 className="hud-label insp-section">Ease to next</h3>
+            <div className="insp-ease-tools">
+              <button className="chip chip-small" onClick={() => TL.copyEase(curve)} title="Copy this ease">
+                Copy
+              </button>
+              <button className="chip chip-small" disabled={!clipboard} onClick={() => clipboard && setCurve(clipboard)} title="Paste the copied ease here">
+                Paste
+              </button>
+              <button className="chip chip-small" onClick={() => TL.easeAll(curve, editSun ? 'sun' : 'camera')} title={`Use this ease on every keyframe's ${editSun ? 'sun' : 'camera'}`}>
+                To all
+              </button>
+            </div>
+          </div>
+          <label className="insp-check" title="Give the sun its own curve, e.g. a steady time-lapse under an eased camera move">
+            <input type="checkbox" checked={!!k.sunEasing} onChange={(e) => set({ sunEasing: e.target.checked ? k.easing : undefined })} />
+            Separate sun ease
+          </label>
+          {k.sunEasing && (
+            <div className="segmented segmented-small" role="group" aria-label="Ease for">
+              <button aria-pressed={!editSun} onClick={() => setEditSun(false)}>
+                Camera
+              </button>
+              <button aria-pressed={editSun} onClick={() => setEditSun(true)}>
+                Sun
+              </button>
+            </div>
+          )}
+          <EaseEditor key={`${k.id}-${editSun}`} value={curve} onChange={setCurve} />
+          </>
+        ))}
+      {tab === 'key' && (
+        <>
       <h3 className="hud-label insp-section">Sun</h3>
       <div className="insp-grid">
         <label className="insp-field">
@@ -127,45 +175,13 @@ export function Inspector() {
         ))}
       </div>
 
-      {!isLast && (
-        <>
-          <div className="insp-ease-head">
-            <h3 className="hud-label insp-section">Ease to next</h3>
-            <div className="insp-ease-tools">
-              <button className="chip chip-small" onClick={() => TL.copyEase(curve)} title="Copy this ease">
-                Copy
-              </button>
-              <button className="chip chip-small" disabled={!clipboard} onClick={() => clipboard && setCurve(clipboard)} title="Paste the copied ease here">
-                Paste
-              </button>
-              <button className="chip chip-small" onClick={() => TL.easeAll(curve, editSun ? 'sun' : 'camera')} title={`Use this ease on every keyframe's ${editSun ? 'sun' : 'camera'}`}>
-                To all
-              </button>
-            </div>
-          </div>
-          <label className="insp-check">
-            <input type="checkbox" checked={!!k.sunEasing} onChange={(e) => set({ sunEasing: e.target.checked ? k.easing : undefined })} />
-            Sun has its own ease (e.g. steady time under a camera ease)
-          </label>
-          {k.sunEasing && (
-            <div className="segmented segmented-small" role="group" aria-label="Ease for">
-              <button aria-pressed={!editSun} onClick={() => setEditSun(false)}>
-                Camera
-              </button>
-              <button aria-pressed={editSun} onClick={() => setEditSun(true)}>
-                Sun
-              </button>
-            </div>
-          )}
-          <EaseEditor key={`${k.id}-${editSun}`} value={curve} onChange={setCurve} />
-        </>
-      )}
-
       <label className="toggle insp-layers">
         <span className="toggle-label">Switch layers here{k.layers ? ` (${Object.values(k.layers).filter(Boolean).length} on)` : ''}</span>
         <input type="checkbox" checked={!!k.layers} onChange={(e) => set({ layers: e.target.checked ? currentLayers() : undefined })} />
       </label>
 
+        </>
+      )}
       <div className="insp-actions">
         <button className="chip chip-small" onClick={() => set({ ...captureNow(), ...(k.layers ? { layers: currentLayers() } : {}) })} title="Use the current view, sun and layers">
           Set from view

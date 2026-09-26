@@ -5,9 +5,9 @@ import { TypedField } from './timeControls';
 
 // Graph size in SVG units (it scales to the panel). y shows -0.5 to 1.5 so overshoot fits.
 const W = 272;
-const H = 150;
-const SPEED_H = 46;
-const PAD = 14;
+const H = 112;
+const SPEED_H = 30;
+const PAD = 12;
 const Y_MIN = -0.5;
 const Y_MAX = 1.5;
 const gx = (x: number) => PAD + x * (W - 2 * PAD);
@@ -21,7 +21,7 @@ const GROUPS: Array<{ id: EaseGroup; label: string; hint: string }> = [
 
 /** A small drawing of a curve, for the preset buttons. */
 function Thumb({ c }: { c: Easing }) {
-  const s = 26;
+  const s = 22;
   const x = (v: number) => 3 + v * (s - 6);
   const y = (v: number) => 3 + ((1.25 - v) / 1.5) * (s - 6);
   const d = c === 'hold' ? `M${x(0)} ${y(0)} H${x(1)} V${y(1)}` : `M${x(0)} ${y(0)} C${x(c[0])} ${y(c[1])} ${x(c[2])} ${y(c[3])} ${x(1)} ${y(1)}`;
@@ -80,7 +80,7 @@ export function EaseEditor({ value, onChange }: { value: Easing; onChange(e: Eas
   const samples = Array.from({ length: 61 }, (_, i) => i / 60);
   const speeds = hold ? samples.map(() => 0) : samples.map((x) => Math.abs(bezierSpeed(c, x)));
   const peak = Math.max(1.5, ...speeds);
-  const sy = (v: number) => H + SPEED_H - 6 - (v / peak) * (SPEED_H - 14);
+  const sy = (v: number) => H + SPEED_H - 4 - (v / peak) * (SPEED_H - 12);
   const speedPath = `M${gx(0)} ${sy(0)} ` + samples.map((x, i) => `L${gx(x)} ${sy(speeds[i])}`).join(' ') + ` L${gx(1)} ${sy(0)} Z`;
 
   const name = presetName(value);
@@ -99,7 +99,7 @@ export function EaseEditor({ value, onChange }: { value: Easing; onChange(e: Eas
         <line className="ease-grid" x1={gx(0)} x2={gx(1)} y1={gy(0.5)} y2={gy(0.5)} />
         <line className="ease-divider" x1={gx(0)} x2={gx(1)} y1={H} y2={H} />
         <path className="ease-speed" d={speedPath} />
-        <text className="ease-axis" x={gx(0)} y={H + 11}>
+        <text className="ease-axis" x={gx(0)} y={H + 10}>
           SPEED
         </text>
         {hold ? (

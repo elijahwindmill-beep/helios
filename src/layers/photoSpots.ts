@@ -50,6 +50,7 @@ export function installPhotoSpots(map: MlMap, beforeLayer: string): () => void {
 
   const markers = new Map<number, Marker>();
   let last: { lat: number; lng: number } | null = null;
+  let pending: { lat: number; lng: number } | null = null;
   let busyUntil = 0;
   let abort: AbortController | null = null;
 
@@ -79,16 +80,21 @@ export function installPhotoSpots(map: MlMap, beforeLayer: string): () => void {
     const c = map.getCenter();
     const here = { lat: c.lat, lng: c.lng };
     if (!force && last && metres(last, here) < REFETCH_M) return;
+    // Already fetching for about here: let it finish.
+    if (pending && metres(pending, here) < REFETCH_M) return;
     if (Date.now() < busyUntil) return;
     abort?.abort();
     abort = new AbortController();
     useSpots.getState().set({ status: 'loading' });
+    pending = here;
     try {
       const spots = await fetchSpots(here.lat, here.lng, 10000, abort.signal);
       last = here;
+      pending = null;
       useSpots.getState().set({ spots, status: 'idle' });
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
+      pending = null;
       // Commons' search is sometimes overloaded for a moment: wait, then try on the next move.
       busyUntil = Date.now() + 15000;
       useSpots.getState().set({ status: err instanceof CommonsBusy ? 'busy' : 'error' });

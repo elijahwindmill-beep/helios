@@ -2908,6 +2908,19 @@ input.insp-at {
   margin-left: auto;
   color: var(--warn);
 }
+.insp-tabs {
+  margin: 10px 0 2px !important;
+}
+.insp-note {
+  margin: 12px 0 4px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.inspector {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline) transparent;
+}
 .insp-ease-head {
   display: flex;
   align-items: center;
@@ -2926,7 +2939,7 @@ input.insp-at {
   display: flex;
   align-items: center;
   gap: 7px;
-  margin: 2px 0 6px;
+  margin: 0 0 4px;
   font-size: 11.5px;
   color: var(--ink-2);
 }
@@ -3014,7 +3027,7 @@ input.insp-at {
 }
 .ease-presets {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+  grid-template-columns: repeat(6, 1fr);
   gap: 4px;
   margin-top: 6px;
 }
@@ -3023,12 +3036,12 @@ input.insp-at {
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  padding: 4px 2px 3px;
+  padding: 2px 1px 1px;
   border: 1px solid var(--hairline-soft);
   border-radius: 7px;
   background: none;
   color: var(--ink-2);
-  font-size: 10.5px;
+  font-size: 10px;
 }
 .ease-preset:hover {
   background: var(--surface-sunk);

@@ -1,6 +1,7 @@
 import { useApp } from '../store/app';
 import { useTimeline } from '../store/timeline';
 import { getMap } from '../map/mapInstance';
+import { snapCenterElevation } from '../map/steadyCamera';
 import { timeZoneAt } from '../sun/timezone';
 import type { Overlays } from '../map/style';
 import { clipDuration, type CameraKey, type Keyframe } from './model';
@@ -29,6 +30,7 @@ export function applyFrame(frame: Frame) {
   app.setTimeExact(frame.sun);
   if (frame.layers) app.setOverlays(frame.layers as Partial<Overlays>);
   const c = frame.camera;
+  snapCenterElevation();
   getMap()?.jumpTo({ center: [c.lng, c.lat], zoom: c.zoom, bearing: c.bearing, pitch: c.pitch });
 }
 
