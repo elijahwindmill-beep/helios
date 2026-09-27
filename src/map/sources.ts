@@ -1,4 +1,4 @@
-// Every tile source Helios loads, with its attribution and licence notes.
+// Every tile source Zenit loads, with its attribution and licence notes.
 // The About panel and README are generated from / kept in sync with this list.
 
 export type ElevationId = 'mapterhorn' | 'terrarium';

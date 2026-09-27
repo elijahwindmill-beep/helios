@@ -103,7 +103,7 @@ describe('project files', async () => {
   });
   it('says plainly what is wrong', () => {
     expect(() => parseProjectFile('{')).toThrow("isn't valid JSON");
-    expect(() => parseProjectFile('{"helios":2}')).toThrow("isn't a Helios project");
+    expect(() => parseProjectFile('{"helios":2}')).toThrow("isn't a Zenit project");
     const broken = structuredClone(good);
     broken.project.clips[0].keyframes[0].camera = { ...cam, lat: Number.NaN };
     expect(() => parseProjectFile(JSON.stringify(broken).replace('null', '"x"'))).toThrow('damaged');

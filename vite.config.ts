@@ -30,9 +30,9 @@ function packageFiles(prefix: string, pkg: string, folder: string, files: string
   };
 }
 
-// GitHub Pages serves the site from /helios/, local dev from /.
+// GitHub Pages serves the site from /zenit/, local dev from /.
 export default defineConfig(({ command }) => ({
-  base: command === 'build' ? '/helios/' : '/',
+  base: command === 'build' ? '/zenit/' : '/',
   plugins: [
     react(),
     packageFiles('maplibre', 'maplibre-gl', 'dist', ['maplibre-gl-worker.mjs', 'maplibre-gl-shared.mjs']),

@@ -17,7 +17,7 @@ export function AboutDialog() {
 
   return (
     <dialog ref={ref} className="panel about" onClose={() => useApp.getState().setAboutOpen(false)}>
-      <h2 className="title">About Helios</h2>
+      <h2 className="title">About Zenit</h2>
       <p>
         Scout sun and shadow on real terrain, then turn it into keyframed clips. Terrain only: buildings and trees are not
         modelled.

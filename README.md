@@ -1,15 +1,15 @@
 <h1>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="design/logo/helios-dark.svg" />
-    <img src="design/logo/helios-light.svg" alt="Helios" width="300" height="70" />
+    <source media="(prefers-color-scheme: dark)" srcset="design/logo/zenit-dark.svg" />
+    <img src="design/logo/zenit-light.svg" alt="Zenit" width="270" height="70" />
   </picture>
 </h1>
 
 Shadow casting map for scheduling and planning trips and photography. Scout sun and shadow on real 3D terrain, then turn it into keyframed clips and export them as video.
 
-The mark is a horizon line through a cut stone under the sun; the HELIOS wordmark is drawn as single strokes, like the engraved lettering on the Soviet Helios-44 lens (no font file).
+The mark is a horizon line through a cut stone under the sun; the ZENIT wordmark is drawn as single strokes, like the engraved lettering on Soviet lens barrels such as the Helios-44 (no font file). The app was called Helios until 27 Sep 2026 (the old /helios/ address no longer works).
 
-**Live app:** https://elijahwindmill-beep.github.io/helios/
+**Live app:** https://elijahwindmill-beep.github.io/zenit/
 
 Default location: Seceda ridgeline, Val Gardena (46.60068, 11.72598).
 
@@ -83,7 +83,7 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 - **Now** jumps to the current time.
 - **Weather** (in the alerts; on a phone under the solstice buttons): the forecast at the pin for the chosen time, from MET Norway: sky, temperature, wind, and rain or snow when there is some. Hourly for the next 2 to 3 days, then in 6-hour blocks, up to about 9 days ahead. Past times and dates further out say so instead of guessing.
 - **Weather warning** (phone): a small dark note floats at the top when the forecast is poor for light and shadows (overcast, fog, rain, sleet, snow, thunder, or wind from 39 km/h), e.g. "Overcast at 08:00 · shadows won't show". × hides it for that forecast slot.
-- **Sun hours (whole day)** (layer panel): a heatmap of how many hours of direct sun each spot gets on the viewed day, from deep blue (none) to orange (11+ h). Helios renders the terrain shadows every 10 minutes from sunrise to sunset and adds them up, so it takes a few seconds; it updates when you change the day or move the pin, and stands in for the cast shadows while on.
+- **Sun hours (whole day)** (layer panel): a heatmap of how many hours of direct sun each spot gets on the viewed day, from deep blue (none) to orange (11+ h). Zenit renders the terrain shadows every 10 minutes from sunrise to sunset and adds them up, so it takes a few seconds; it updates when you change the day or move the pin, and stands in for the cast shadows while on.
 - **Cast shadows** (layer panel) shows where the terrain blocks the sun. With the detailed elevation (see Settings), a sharper close-up layer covers about 2 km around the view centre (3 km on Detailed) from 1.6 m elevation where the region has LiDAR, while mountains up to 12 km away still cast into it.
 - The relief shading on Paper and Terrain is lit from the real sun direction too.
 - **Golden hour light** (layer panel, on by default): the whole map takes the colour of the real light. Neutral when the sun is high, warming from about 12° down to a deep orange at sunset, then the blue of blue hour (sun 4° to 6° below the horizon) and a dim blue night. Shadows cool toward sky blue as the sun gets low, like real shadows lit by the sky. It's drawn into the map image itself, so video export will include it; labels stay neutral. Turn it off for a plain scouting view.
@@ -96,7 +96,7 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 - **Theme:** Dark (the Frost HUD), Light (the Paper palette from the brief: warm paper, ink, amber), or Auto, which follows the system setting.
 - **Performance:** Smooth, Balanced (default) or Detailed. It sets how sharp and far the shadows are, whether the close-up shadows are drawn, the drawing resolution (Smooth draws at normal resolution on high-density screens), the blurs over the panels (Smooth leaves them out) and how detailed the Google 3D tiles get. Try Smooth on a laptop on battery or a phone.
 - **Elevation data:** Detailed (Mapterhorn, the default) or Standard (Mapzen, 30 m). Detailed uses LiDAR wherever a region publishes it: South Tyrol 2.5 m, Austria 1 m, Switzerland, Trentino 5 m, and 30 m (Copernicus) elsewhere. Cliffs, towers and gullies come out sharply, and shadows from small ridges show. Switch to Standard if the detailed tiles are slow or down.
-- **Google 3D tiles** (optional): paste your own Google Maps Platform key (Map Tiles API enabled, with billing) and switch on **Photorealistic 3D** for Google's 3D mesh of buildings, trees and rock faces, with Helios's cast shadows (or sun hours) painted onto it. The key stays in this browser. Google's credits show at the bottom while it's on. It's left out of exported videos, because Google allows only short, clearly marked promotional clips. The 3D renderer (about 1 MB) only downloads the first time you switch it on.
+- **Google 3D tiles** (optional): paste your own Google Maps Platform key (Map Tiles API enabled, with billing) and switch on **Photorealistic 3D** for Google's 3D mesh of buildings, trees and rock faces, with Zenit's cast shadows (or sun hours) painted onto it. The key stays in this browser. Google's credits show at the bottom while it's on. It's left out of exported videos, because Google allows only short, clearly marked promotional clips. The 3D renderer (about 1 MB) only downloads the first time you switch it on.
 
 ### Sun in 3D
 
@@ -104,7 +104,7 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 - With the lens look on, the sun scene gets the same tilt-shift blur toward the top and bottom as the map, so it sits at the terrain's focal depth (also in exported video).
 - Around the pin: a **compass ring** (ticks every 10°, N/E/S/W), today's **sun path** in amber with sunrise and sunset badges where it meets the horizon, the **solstice** paths (dashed) and the **equinox** path (dotted). Each has its own switch in the layer panel.
 - The **sun** sits on its path with a line down to the pin, its elevation (△) and its azimuth on the ring.
-- **Drag the sun** along its path to change the time. Hold **Shift** while dragging to move it anywhere in the sky: Helios finds the date and time when the sun is there. A plain drag never changes the date, however far you pull it.
+- **Drag the sun** along its path to change the time. Hold **Shift** while dragging to move it anywhere in the sky: Zenit finds the date and time when the sun is there. A plain drag never changes the date, however far you pull it.
 - The ring badges show when the sun centre crosses a flat horizon (like Shadowmap's badges), so they are a few minutes inside the sunrise/sunset times in the sun card.
 - The time is part of the page link (`&t=…` in UTC), so a shared link opens at the same moment.
 
@@ -123,7 +123,7 @@ In the layer panel under **Your layers** (on a phone: the Layers button), or fro
 - **Timeline** (tool dock, or the diamond button on a phone): set the view and sun, press **◇ Add keyframe** (K), move the playhead, change the view and sun, add another. Space plays, arrows step (Shift: tenths), Delete removes the selected keyframe. Drag diamonds to move them (snaps to seconds; Alt for tenths).
 - **Stops / Passes through** (Ease tab, middle keyframes): a keyframe that stops eases in and out like a separate move. One that passes through only guides the path: the camera keeps moving through it (like After Effects' roving keyframes), and the ease set on the stop before it covers the whole move to the next stop. The keyframe's time still sets roughly when the camera passes it. Pass-through keyframes are round on the timeline.
 - Keyframes store the height the view pivots on, so playback and export glide over rough terrain instead of riding each bump under the screen centre (older keyframes get it the first time you play or scrub).
-- **Terrain clearance:** before playing (and exporting) Helios checks the whole camera path against the elevation data. Where a low move would pass within 30 m of the ground, the camera rises on a smooth swell that starts early and eases back down, instead of being pushed up out of each bump frame by frame.
+- **Terrain clearance:** before playing (and exporting) Zenit checks the whole camera path against the elevation data. Where a low move would pass within 30 m of the ground, the camera rises on a smooth swell that starts early and eases back down, instead of being pushed up out of each bump frame by frame.
 - **Inspector** (right, when a keyframe is selected): sun time and date, **Continuous** (glide the exact moment: day sweeps, year lapses) or **Day lapse** (the date steps day by day, the time holds or sweeps N times), camera numbers, the ease to the next keyframe, layer switches, Set from view, Delete.
 - **Ease to next** works like After Effects' graph editor with AE Juice / Flow style presets:
   - A curve with two handles to drag (hold Shift to keep a handle flat, so the move starts or stops dead), and the **speed graph** under it showing the velocity. The line under the graph gives each end's speed (0× = standing start, 1× = steady) and influence, as in AE's keyframe velocity.
@@ -195,7 +195,7 @@ Every push to `main` builds the site and publishes it to GitHub Pages (see `.git
 
 ## Data sources and licences
 
-Helios is made for monetised videos, so each source's commercial terms matter. The same list is in the app under "About, sources and licences".
+Zenit is made for monetised videos, so each source's commercial terms matter. The same list is in the app under "About, sources and licences".
 
 | Source | Used for | Licence | Paid work? |
 |---|---|---|---|
@@ -212,9 +212,9 @@ Helios is made for monetised videos, so each source's commercial terms matter. T
 | [Google Photorealistic 3D Tiles](https://developers.google.com/maps/documentation/tile/policies) | Optional 3D mesh (your key) | Google Maps Platform terms; Google's credits shown while on | **Not in videos**: left out of exports (Google allows only short promotional clips) |
 | EGM96 geoid (NGA) | Seating Google's 3D tiles at sea-level heights | Public domain | Yes |
 
-Sun position uses NOAA's solar calculator (accurate to about 0.01°). Sunrise and sunset in the sun card are the standard ones: sun centre 0.833° below a flat horizon. At Seceda on 26 Sep 2026 Helios gives 28.2° / 127.2° at 10:06 where Shadowmap shows 28.4° / 127.2°, and sunrise/sunset 07:04 / 19:03 where Shadowmap's slider shows 07:05 / 19:05. Real sunrise at a spot can be later and sunset earlier when mountains block the horizon; the cast shadows show that, the sunrise/sunset numbers don't.
+Sun position uses NOAA's solar calculator (accurate to about 0.01°). Sunrise and sunset in the sun card are the standard ones: sun centre 0.833° below a flat horizon. At Seceda on 26 Sep 2026 Zenit gives 28.2° / 127.2° at 10:06 where Shadowmap shows 28.4° / 127.2°, and sunrise/sunset 07:04 / 19:03 where Shadowmap's slider shows 07:05 / 19:05. Real sunrise at a spot can be later and sunset earlier when mountains block the horizon; the cast shadows show that, the sunrise/sunset numbers don't.
 
-Shadows are computed from the elevation data: for every ground point Helios walks toward the sun and checks whether terrain rises above it, including mountains up to 12 km away and the curvature of the earth. Edges are softened by the width of the sun's disk.
+Shadows are computed from the elevation data: for every ground point Zenit walks toward the sun and checks whether terrain rises above it, including mountains up to 12 km away and the curvature of the earth. Edges are softened by the width of the sun's disk.
 
 Terrain detail depends on the region. With the default detailed elevation (Mapterhorn), South Tyrol is 2.5 m (the province's DGM, CC0), Austria 1 m, Switzerland and several Italian regions 0.5 to 5 m, and the rest of the world 30 m (Copernicus). That's enough for towers, gullies and small ridges, not for single trees or buildings (the optional Google 3D tiles show those, but their shadows aren't computed: the painted shadows come from the terrain). South Tyrol's own 0.5 m LiDAR is only published as pre-lit pictures, so 2.5 m is the finest usable there without running a tile server. Its 20 cm 2023 aerial photos are available as an imagery choice.
 

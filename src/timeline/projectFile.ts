@@ -21,7 +21,7 @@ export function saveProjectFile() {
   const a = document.createElement('a');
   const name = (tl.activeClip().name || 'project').replace(/[^\w\- ]+/g, '').trim() || 'project';
   a.href = URL.createObjectURL(blob);
-  a.download = `helios-${name}.json`;
+  a.download = `zenit-${name}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }

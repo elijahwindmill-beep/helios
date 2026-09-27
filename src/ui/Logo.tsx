@@ -1,6 +1,6 @@
 /**
- * The Helios mark: a horizon line through a cut stone, the sun above it. The wordmark is drawn
- * as single strokes, like the engraved lettering on the Soviet Helios-44 lens barrels.
+ * The Zenit mark: a horizon line through a cut stone, the sun above it. The wordmark is drawn
+ * as single strokes, like the engraved lettering on Soviet lens barrels (the Helios-44).
  */
 
 export function Mark({ height = 22 }: { height?: number }) {
@@ -15,19 +15,18 @@ export function Mark({ height = 22 }: { height?: number }) {
   );
 }
 
-/** HELIOS, cap height 20 units. */
+/** ZENIT, cap height 20 units. */
 export const WORDMARK_PATHS = [
-  'M0 0V20M12 0V20M0 10H12',
+  'M0 0H12L0 20H12',
   'M29 0H19V20H29M19 10H27',
-  'M36 0V20H46',
-  'M53 0V20',
-  'M66.5 0C70.5 0 73 2.5 73 6V14C73 17.5 70.5 20 66.5 20S60 17.5 60 14V6C60 2.5 62.5 0 66.5 0Z',
-  'M92 4.5C91.3 1.8 89.2 0 86.2 0C82.8 0 80.4 2 80.4 5C80.4 8.2 83 9.2 86 10C89.2 10.8 92 11.9 92 15.2C92 18.2 89.6 20 86 20C82.8 20 80.6 18.4 80 15.5',
+  'M36 20V0L48 20V0',
+  'M55 0V20',
+  'M62 0H74M68 0V20',
 ];
 
 export function Wordmark({ height = 14 }: { height?: number }) {
   return (
-    <svg className="logo-word" height={height} width={(height * 95) / 23} viewBox="-1.5 -1.5 95 23" role="img" aria-label="Helios">
+    <svg className="logo-word" height={height} width={(height * 77) / 23} viewBox="-1.5 -1.5 77 23" role="img" aria-label="Zenit">
       <g fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         {WORDMARK_PATHS.map((d) => (
           <path key={d} d={d} />

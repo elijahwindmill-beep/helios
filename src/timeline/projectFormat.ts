@@ -28,7 +28,7 @@ export function parseProjectFile(text: string): ProjectFile {
     throw new Error("That file isn't valid JSON.");
   }
   const f = data as Partial<ProjectFile>;
-  if (!f || f.helios !== 1) throw new Error("That file isn't a Helios project.");
+  if (!f || f.helios !== 1) throw new Error("That file isn't a Zenit project.");
   const clips = f.project?.clips;
   if (!Array.isArray(clips) || !clips.length) throw new Error('The project has no clips.');
   for (const c of clips) {

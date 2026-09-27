@@ -176,7 +176,7 @@ export async function runExport() {
   fillPivotHeights();
   const duration = clipDuration(clip);
   const total = Math.round(duration * fps) + 1;
-  const filename = `helios-${(clip.name || 'clip').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'clip'}-${height}p${fps}.mp4`;
+  const filename = `zenit-${(clip.name || 'clip').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'clip'}-${height}p${fps}.mp4`;
   useExport.setState({ phase: 'rendering', frame: 0, total, message: '', filename });
   if (ex.url) URL.revokeObjectURL(ex.url);
 
