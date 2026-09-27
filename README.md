@@ -187,6 +187,8 @@ VITE_MAPTILER_KEY=your-key-here
 
 ### Optional: Google 3D tiles key
 
+Technical notes for connecting and checking the 3D tiles (how the layer works, what's verified, what to test with a real key): [docs/google-3d-tiles.md](docs/google-3d-tiles.md).
+
 Create a key in Google Cloud with the **Map Tiles API** enabled and billing set up, then paste it under Settings → Google 3D tiles. For local development it can go in `.env.local` as `VITE_GOOGLE_MAPS_KEY=...` (same rules as above: never in the GitHub build). Restrict the key to your site's address in Google Cloud.
 
 ## Deploying
