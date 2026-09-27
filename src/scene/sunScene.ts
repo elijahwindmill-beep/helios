@@ -30,10 +30,16 @@ const LINE_SHADOW = 'rgba(8,12,18,0.45)';
 /** Tilt-shift blur at the top and bottom edges at full lens strength, CSS pixels. */
 const TILT_BLUR_PX = 3;
 
+type Rgba = [number, number, number, number];
+const rgba = ([r, g, b, a]: Rgba) => `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${a.toFixed(3)})`;
+
 /** At eye level the dome surrounds the viewer at this radius, metres: the paths sit in the real sky. */
 const EYE_DOME_M = 400;
 /** The camera counts as at eye level below this height over the ground (e.g. standing-view keyframes). */
 const EYE_LEVEL_M = 15;
+
+/** The sun's apparent diameter, degrees. */
+const SUN_DIAMETER_DEG = 0.53;
 
 /** Sun and its reach, in CSS pixels. */
 const SUN_HIT_PX = 28;
@@ -147,67 +153,27 @@ export function installSunScene(map: MlMap): () => void {
   };
 
   /**
-   * Whether the terrain hides the sun from a viewer: walks out along the sun's bearing to 30 km
-   * and checks whether any ground rises above the line to the sun (with the earth's curve and
-   * the usual refraction). Uses the terrain MapLibre has loaded, so it matches the picture.
+   * How high the terrain's skyline stands toward an azimuth, degrees above the horizontal, as
+   * seen from a viewer: walks out along that bearing to 30 km (with the earth's curve and the
+   * usual refraction) over the terrain MapLibre has loaded, so it matches the picture.
    */
-  let blockedCache: { key: string; hidden: boolean } | null = null;
-  const sunBehindTerrain = (lat: number, lng: number, alt: number, azimuth: number, elevation: number): boolean => {
-    const key = `${lat.toFixed(6)},${lng.toFixed(6)},${alt.toFixed(1)},${azimuth.toFixed(2)},${elevation.toFixed(2)}`;
-    if (blockedCache?.key === key) return blockedCache.hidden;
-    const slope = Math.tan((elevation * Math.PI) / 180);
+  let skylineCache: { key: string; angle: number } | null = null;
+  const skylineAngle = (lat: number, lng: number, alt: number, azimuth: number): number => {
+    const key = `${lat.toFixed(6)},${lng.toFixed(6)},${alt.toFixed(1)},${azimuth.toFixed(2)}`;
+    if (skylineCache?.key === key) return skylineCache.angle;
     const a = (azimuth * Math.PI) / 180;
     const cosLat = Math.cos((lat * Math.PI) / 180);
-    let hidden = elevation < 0;
-    for (let d = 20; !hidden && d < 30000; d *= 1.06) {
+    let best = -Infinity;
+    for (let d = 20; d < 30000; d *= 1.06) {
       const pLat = lat + ((d * Math.cos(a)) / EARTH_RADIUS) * (180 / Math.PI);
       const pLng = lng + ((d * Math.sin(a)) / (EARTH_RADIUS * cosLat)) * (180 / Math.PI);
       const h = map.queryTerrainElevation([pLng, pLat]);
       if (h === null || h === undefined) continue;
-      const drop = (0.87 * d * d) / (2 * EARTH_RADIUS);
-      if ((h - drop - alt) / d > slope) hidden = true;
+      best = Math.max(best, (h - (0.87 * d * d) / (2 * EARTH_RADIUS) - alt) / d);
     }
-    blockedCache = { key, hidden };
-    return hidden;
-  };
-
-  /**
-   * How much of the sun's disc on screen the terrain in the picture covers, 0 to 1: rays from
-   * the camera through the disc's centre and four points around it, each walked out to 60 km
-   * against the loaded terrain. `at` and `groundZ` are the scene's local frame origin.
-   */
-  let coverCache: { key: string; share: number } | null = null;
-  const coveredShare = (q: [number, number], discR: number, at: { lat: number; lng: number }, groundZ: number, W: number, H: number): number => {
-    const toClip = localToClip;
-    if (!toClip) return 0;
-    const key = `${Array.from(toClip, (v) => v.toPrecision(7)).join(',')}|${q[0].toFixed(1)},${q[1].toFixed(1)}`;
-    if (coverCache?.key === key) return coverCache.share;
-    const inv = invert(toClip);
-    if (!inv) return 0;
-    const cosLat = Math.cos((at.lat * Math.PI) / 180);
-    const deg = 180 / Math.PI;
-    const o = 0.7 * discR;
-    const points: Array<[number, number]> = [[0, 0], [o, 0], [-o, 0], [0, o], [0, -o]];
-    let covered = 0;
-    for (const [dx, dy] of points) {
-      const { origin, dir } = pixelRay(inv, q[0] + dx, q[1] + dy, W, H);
-      for (let t = 5; t < 60000; t *= 1.1) {
-        const x = origin[0] + dir[0] * t;
-        const y = origin[1] + dir[1] * t;
-        const alt = groundZ + origin[2] + dir[2] * t;
-        // Above the highest Alps and still climbing: nothing left to hit.
-        if (alt > 5000 && dir[2] > 0) break;
-        const h = map.queryTerrainElevation([at.lng + (x / (EARTH_RADIUS * cosLat)) * deg, at.lat + (y / EARTH_RADIUS) * deg]);
-        if (h === null || h === undefined) continue;
-        if (h - (0.87 * (x * x + y * y)) / (2 * EARTH_RADIUS) > alt) {
-          covered++;
-          break;
-        }
-      }
-    }
-    const share = covered / points.length;
-    coverCache = { key, share };
-    return share;
+    const angle = Number.isFinite(best) ? (Math.atan(best) * 180) / Math.PI : -90;
+    skylineCache = { key, angle };
+    return angle;
   };
 
   // ---- Drawing ----
@@ -421,49 +387,38 @@ export function installSunScene(map: MlMap): () => void {
         const q = S(dir);
         // Hidden from the viewer, or (in the map view) from someone standing at the pin.
         const from = eyeLevel ? eye : { lat: pin.lat, lng: pin.lng, altitude: ground + EYE_HEIGHT_M };
-        const hidden = sunBehindTerrain(from.lat, from.lng, from.altitude, sun.azimuth, sun.elevationTrue);
+        const below = skylineAngle(from.lat, from.lng, from.altitude, sun.azimuth) - sun.elevationTrue;
+        // Behind the ridge once its centre is; the tint cools over the sun's half-degree width.
+        const hidden = below > 0;
+        const cover = Math.min(1, Math.max(0, below / SUN_DIAMETER_DEG + 0.5));
         if (q) {
-          // The body fades where the terrain in the picture is in front of it (the sun is far
-          // behind any mountain), and is empty when a ridge hides it from the pin or viewer; the
-          // glow (the crown) always stays, so you still see where it is.
           const discR = 8.5 * scale;
-          const cover = hidden ? 1 : coveredShare(q, discR, at, ground, W, H);
+          // Always see-through: a glowing crown and a solid glowing rim around an empty disc. Warm
+          // in the open, cooling to a cold blue as it slips behind the terrain from the pin (or
+          // from you, standing).
+          const tint = (warm: Rgba, cold: Rgba) => rgba(warm.map((v, i) => v + (cold[i] - v) * cover) as Rgba);
           const glowR = 40 * scale;
           const glow = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], glowR);
-          glow.addColorStop(0, 'rgba(255,255,255,1)');
-          glow.addColorStop(0.25, 'rgba(255,243,208,0.9)');
-          glow.addColorStop(0.6, 'rgba(245,166,35,0.28)');
-          glow.addColorStop(1, 'rgba(245,166,35,0)');
+          glow.addColorStop(0, tint([255, 255, 255, 1], [235, 245, 255, 1]));
+          glow.addColorStop(0.25, tint([255, 243, 208, 0.9], [190, 215, 250, 0.85]));
+          glow.addColorStop(0.6, tint([245, 166, 35, 0.28], [110, 160, 230, 0.28]));
+          glow.addColorStop(1, tint([245, 166, 35, 0], [110, 160, 230, 0]));
           ctx.beginPath();
           ctx.arc(q[0], q[1], glowR, 0, 2 * Math.PI);
           ctx.arc(q[0], q[1], discR, 0, 2 * Math.PI, true);
           ctx.fillStyle = glow;
           ctx.fill('evenodd');
-          if (cover < 1) {
-            // A white sun, like Apple Weather.
-            ctx.save();
-            ctx.globalAlpha = 1 - cover;
-            ctx.beginPath();
-            ctx.arc(q[0], q[1], discR, 0, 2 * Math.PI);
-            ctx.fillStyle = '#fffdf6';
-            ctx.fill();
-            ctx.restore();
-          }
-          if (cover > 0) {
-            // Its rim, a solid glowing line, so the see-through sun still reads as the sun.
-            ctx.save();
-            ctx.globalAlpha = cover;
-            ctx.beginPath();
-            ctx.arc(q[0], q[1], discR, 0, 2 * Math.PI);
-            ctx.strokeStyle = 'rgba(255,253,246,0.95)';
-            ctx.lineWidth = 1.5 * scale;
-            ctx.shadowColor = 'rgba(255,205,120,0.95)';
-            ctx.shadowBlur = 8 * scale;
-            ctx.stroke();
-            ctx.stroke();
-            ctx.restore();
-          }
-          // No lens glare from a sun that's mostly behind the terrain.
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(q[0], q[1], discR, 0, 2 * Math.PI);
+          ctx.strokeStyle = tint([255, 253, 246, 0.95], [225, 238, 255, 0.95]);
+          ctx.lineWidth = 1.5 * scale;
+          ctx.shadowColor = tint([255, 205, 120, 0.95], [120, 175, 255, 0.95]);
+          ctx.shadowBlur = 8 * scale;
+          ctx.stroke();
+          ctx.stroke();
+          ctx.restore();
+          // No lens glare from a sun that's mostly behind the terrain; it can always be dragged.
           sunScreen = q;
           if (cover < 0.5) glareAt = q;
           if (hidden) {
