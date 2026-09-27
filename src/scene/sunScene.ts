@@ -4,7 +4,7 @@ import { sunPosition } from '../sun/position';
 import { dayTimes, HORIZON_GEOMETRIC, seasons } from '../sun/times';
 import { formatClock, startOfZonedDay, timeZoneAt, zonedToUtc } from '../sun/timezone';
 import { solveDateTime, solveTimeOnDay, skyVector, type SkyDirection } from '../sun/solver';
-import { EARTH_RADIUS } from '../map/cameraMath';
+import { EARTH_RADIUS, EYE_HEIGHT_M } from '../map/cameraMath';
 import { cameraEye } from '../map/camera';
 import { isStanding } from '../store/stand';
 import { invert, multiply, pixelRay, raySphere, toScreen, transform, type Mat4, type Vec3 } from './projection';
@@ -166,6 +166,45 @@ export function installSunScene(map: MlMap): () => void {
     }
     blockedCache = { key, hidden };
     return hidden;
+  };
+
+  /**
+   * How much of the sun's disc on screen the terrain in the picture covers, 0 to 1: rays from
+   * the camera through the disc's centre and four points around it, each walked out to 60 km
+   * against the loaded terrain. `at` and `groundZ` are the scene's local frame origin.
+   */
+  let coverCache: { key: string; share: number } | null = null;
+  const coveredShare = (q: [number, number], discR: number, at: { lat: number; lng: number }, groundZ: number, W: number, H: number): number => {
+    const toClip = localToClip;
+    if (!toClip) return 0;
+    const key = `${Array.from(toClip, (v) => v.toPrecision(7)).join(',')}|${q[0].toFixed(1)},${q[1].toFixed(1)}`;
+    if (coverCache?.key === key) return coverCache.share;
+    const inv = invert(toClip);
+    if (!inv) return 0;
+    const cosLat = Math.cos((at.lat * Math.PI) / 180);
+    const deg = 180 / Math.PI;
+    const o = 0.7 * discR;
+    const points: Array<[number, number]> = [[0, 0], [o, 0], [-o, 0], [0, o], [0, -o]];
+    let covered = 0;
+    for (const [dx, dy] of points) {
+      const { origin, dir } = pixelRay(inv, q[0] + dx, q[1] + dy, W, H);
+      for (let t = 5; t < 60000; t *= 1.1) {
+        const x = origin[0] + dir[0] * t;
+        const y = origin[1] + dir[1] * t;
+        const alt = groundZ + origin[2] + dir[2] * t;
+        // Above the highest Alps and still climbing: nothing left to hit.
+        if (alt > 5000 && dir[2] > 0) break;
+        const h = map.queryTerrainElevation([at.lng + (x / (EARTH_RADIUS * cosLat)) * deg, at.lat + (y / EARTH_RADIUS) * deg]);
+        if (h === null || h === undefined) continue;
+        if (h - (0.87 * (x * x + y * y)) / (2 * EARTH_RADIUS) > alt) {
+          covered++;
+          break;
+        }
+      }
+    }
+    const share = covered / points.length;
+    coverCache = { key, share };
+    return share;
   };
 
   // ---- Drawing ----
@@ -376,41 +415,59 @@ export function installSunScene(map: MlMap): () => void {
         const el = S([dir[0] * 0.45, dir[1] * 0.45, dir[2] * 0.45]);
         if (el) label(6, () => pill([el[0] + 30, el[1]], `△ ${sun.elevation.toFixed(1)}°`, GLASS, '#ffffff', font(500, 12)));
         const q = S(dir);
-        const hidden = eyeLevel && sunBehindTerrain(eye.lat, eye.lng, eye.altitude, sun.azimuth, sun.elevationTrue);
-        if (q && hidden) {
-          // Behind a ridge from here: an outline where it is, and no lens glare.
-          ctx.beginPath();
-          ctx.arc(q[0], q[1], 8.5 * scale, 0, 2 * Math.PI);
-          ctx.setLineDash([2, 3]);
-          ctx.strokeStyle = 'rgba(255,253,246,0.85)';
-          ctx.lineWidth = 1.2;
-          ctx.stroke();
-          ctx.setLineDash([]);
-          const note = `${formatClock(s.time, tz)} · behind terrain`;
-          ctx.font = font(600, 14);
-          // Left edge just clear of the sun (the pill is placed by its centre).
-          const half = (ctx.measureText(note).width + 14) / 2;
-          label(10, () => pill([q[0] + 16 * scale + 6 + half, q[1]], note, GLASS, '#ffffff', font(600, 14)));
-          const r = 14 * scale;
-          placed.push([q[0] - r, q[1] - r, q[0] + r, q[1] + r]);
-        } else if (q) {
-          sunScreen = q;
-          // A white sun with a warm glow, like Apple Weather.
+        // Hidden from the viewer, or (in the map view) from someone standing at the pin.
+        const from = eyeLevel ? eye : { lat: pin.lat, lng: pin.lng, altitude: ground + EYE_HEIGHT_M };
+        const hidden = sunBehindTerrain(from.lat, from.lng, from.altitude, sun.azimuth, sun.elevationTrue);
+        if (q) {
+          // The body fades where the terrain in the picture is in front of it (the sun is far
+          // behind any mountain), and is empty when a ridge hides it from the pin or viewer; the
+          // glow (the crown) always stays, so you still see where it is.
+          const discR = 8.5 * scale;
+          const cover = hidden ? 1 : coveredShare(q, discR, at, ground, W, H);
           const glowR = 40 * scale;
           const glow = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], glowR);
           glow.addColorStop(0, 'rgba(255,255,255,1)');
           glow.addColorStop(0.25, 'rgba(255,243,208,0.9)');
           glow.addColorStop(0.6, 'rgba(245,166,35,0.28)');
           glow.addColorStop(1, 'rgba(245,166,35,0)');
-          ctx.fillStyle = glow;
           ctx.beginPath();
           ctx.arc(q[0], q[1], glowR, 0, 2 * Math.PI);
-          ctx.fill();
-          ctx.beginPath();
-          ctx.arc(q[0], q[1], 8.5 * scale, 0, 2 * Math.PI);
-          ctx.fillStyle = '#fffdf6';
-          ctx.fill();
-          label(10, () => pill([q[0] + 36 * labelScale + 8 * scale, q[1]], formatClock(s.time, tz), GLASS, '#ffffff', font(600, 14)));
+          ctx.arc(q[0], q[1], discR, 0, 2 * Math.PI, true);
+          ctx.fillStyle = glow;
+          ctx.fill('evenodd');
+          if (cover < 1) {
+            // A white sun, like Apple Weather.
+            ctx.save();
+            ctx.globalAlpha = 1 - cover;
+            ctx.beginPath();
+            ctx.arc(q[0], q[1], discR, 0, 2 * Math.PI);
+            ctx.fillStyle = '#fffdf6';
+            ctx.fill();
+            ctx.restore();
+          }
+          if (cover > 0) {
+            // Its rim, a solid glowing line, so the see-through sun still reads as the sun.
+            ctx.save();
+            ctx.globalAlpha = cover;
+            ctx.beginPath();
+            ctx.arc(q[0], q[1], discR, 0, 2 * Math.PI);
+            ctx.strokeStyle = 'rgba(255,253,246,0.95)';
+            ctx.lineWidth = 1.5 * scale;
+            ctx.shadowColor = 'rgba(255,205,120,0.95)';
+            ctx.shadowBlur = 8 * scale;
+            ctx.stroke();
+            ctx.stroke();
+            ctx.restore();
+          }
+          // No lens glare from a sun that's mostly behind the terrain.
+          if (cover < 0.5) sunScreen = q;
+          if (hidden) {
+            const note = `${formatClock(s.time, tz)} · behind terrain`;
+            ctx.font = font(600, 14);
+            // Left edge just clear of the sun (the pill is placed by its centre).
+            const half = (ctx.measureText(note).width + 14) / 2;
+            label(10, () => pill([q[0] + 16 * scale + 6 + half, q[1]], note, GLASS, '#ffffff', font(600, 14)));
+          } else label(10, () => pill([q[0] + 36 * labelScale + 8 * scale, q[1]], formatClock(s.time, tz), GLASS, '#ffffff', font(600, 14)));
           const r = 14 * scale;
           placed.push([q[0] - r, q[1] - r, q[0] + r, q[1] + r]); // the sun itself
         }
