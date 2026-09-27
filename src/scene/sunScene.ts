@@ -33,9 +33,11 @@ const LINE_SHADOW = 'rgba(8,12,18,0.45)';
 const TILT_BLUR_PX = 3;
 
 /**
- * Flares: the sun's rim boils gently and slow tongues of light lick out from it, like
- * prominences. Both are a few sine waves around the rim drifting at their own speeds (a cheap,
- * smooth, looping turbulence), always moving.
+ * Flares ("filaments", picked from the mockups): thin, sharp spikes of light of different
+ * lengths bristle from the rim, bunched where a slow swell runs round it, and the rim itself
+ * boils with a fine jagged edge. All of it is a few sine waves around the rim drifting at their
+ * own speeds (cheap, smooth turbulence; "ridged" folds them into sharp crests), stepped at
+ * 18 frames a second so it moves with a slight stutter, always.
  */
 interface Wave {
   k: number;
@@ -43,22 +45,27 @@ interface Wave {
   p: number;
   w: number;
 }
-function waves(seed: number, n: number, lo: number, hi: number, fall: number): Wave[] {
+function waves(seed: number, n: number, lo: number, hi: number, fall: number, speed: number): Wave[] {
   let x = seed;
   const rnd = () => (x = (x * 16807) % 2147483647) / 2147483647;
   const out: Wave[] = [];
   for (let i = 0; i < n; i++) {
     const k = Math.round(lo + (hi - lo) * rnd());
-    out.push({ k, a: 1 / Math.pow(k, fall), p: rnd() * 2 * Math.PI, w: (rnd() - 0.5) * 2.4 });
+    out.push({ k, a: 1 / Math.pow(k, fall), p: rnd() * 2 * Math.PI, w: (rnd() - 0.5) * speed });
   }
   const sum = out.reduce((a, o) => a + o.a, 0);
   return out.map((o) => ({ ...o, a: o.a / sum }));
 }
-const BOIL = waves(7, 9, 5, 28, 0.6);
-const TONGUES = waves(19, 5, 2, 7, 0.3);
+const BOIL = waves(7, 9, 5, 28, 0.6, 2.4);
+const SWELL = waves(19, 5, 2, 7, 0.3, 2.4);
+const FINE = waves(41, 10, 18, 64, 0.35, 7);
+const FILAMENTS = waves(53, 12, 9, 40, 0.2, 3);
 const turbulence = (ws: Wave[], angle: number, t: number) => ws.reduce((a, o) => a + o.a * Math.sin(o.k * angle + o.p + o.w * t), 0);
-/** Redraws per second for the flares (Smooth performance: fewer). */
-const FLARE_FPS = { smooth: 15, balanced: 30, detailed: 30 } as const;
+const ridged = (ws: Wave[], angle: number, t: number) => ws.reduce((a, o) => a + o.a * (1 - Math.abs(Math.sin(o.k * angle + o.p + o.w * t))), 0);
+/** The flares' frame rate: stepped, for the stutter. */
+const FLARE_FPS = 18;
+/** Filament length, relative to the mockup's. */
+const FLARE_LENGTH = 1.1;
 
 /** Video export sets the flare clock to each frame's time, so the flares move the same in every export. */
 let flareClock: number | null = null;
@@ -469,12 +476,11 @@ export function installSunScene(map: MlMap): () => void {
           ctx.arc(q[0], q[1], discR, 0, 2 * Math.PI, true);
           ctx.fillStyle = glow;
           ctx.fill('evenodd');
-          // Flares, sized to the sun (never so small they vanish).
-          const tau = flareClock ?? performance.now() / 1000;
-          const f = Math.max(0.4, discR / 34);
-          const outline = (r: number, shape: (angle: number) => number) => {
-            for (let i = 0; i <= 96; i++) {
-              const a = (i / 96) * 2 * Math.PI;
+          // Flares, in proportion to the sun, on an 18 fps clock.
+          const tau = Math.floor((flareClock ?? performance.now() / 1000) * FLARE_FPS) / FLARE_FPS;
+          const outline = (r: number, shape: (angle: number) => number, n: number) => {
+            for (let i = 0; i <= n; i++) {
+              const a = (i / n) * 2 * Math.PI;
               const rr = r + shape(a);
               const x = q[0] + Math.cos(a) * rr;
               const y = q[1] + Math.sin(a) * rr;
@@ -483,12 +489,21 @@ export function installSunScene(map: MlMap): () => void {
             }
             ctx.closePath();
           };
+          const reach = discR * 2.6 * FLARE_LENGTH;
           ctx.save();
           ctx.globalAlpha = 0.85;
           ctx.beginPath();
-          outline(discR, (a) => 2 * f + 130 * f * Math.max(0, turbulence(TONGUES, a, tau * 0.9)) ** 1.6);
+          outline(
+            discR,
+            (a) => {
+              const swell = 0.35 + Math.max(0, turbulence(SWELL, a, tau * 0.7)) ** 1.1;
+              const spikes = Math.max(0, ridged(FILAMENTS, a, tau) - 0.35) ** 2.6 * 3.2;
+              return discR * 0.05 + reach * swell * spikes;
+            },
+            240,
+          );
           ctx.arc(q[0], q[1], discR, 0, 2 * Math.PI, true);
-          const flare = ctx.createRadialGradient(q[0], q[1], discR, q[0], q[1], discR + 55 * f);
+          const flare = ctx.createRadialGradient(q[0], q[1], discR, q[0], q[1], discR * (1 + 2.8 * FLARE_LENGTH));
           flare.addColorStop(0, tint([255, 248, 225, 1], [215, 232, 255, 1]));
           flare.addColorStop(0.35, tint([255, 214, 140, 0.75], [160, 200, 250, 0.7]));
           flare.addColorStop(1, tint([245, 166, 35, 0], [110, 160, 230, 0]));
@@ -497,11 +512,12 @@ export function installSunScene(map: MlMap): () => void {
           ctx.restore();
           ctx.save();
           ctx.beginPath();
-          outline(discR, (a) => Math.max(1, 3 * f) * turbulence(BOIL, a, tau * 2));
+          outline(discR, (a) => discR * 0.09 * (turbulence(BOIL, a, tau * 2) + 0.35 * turbulence(FINE, a, tau * 3)), 120);
+          // A thin line and a tight glow, so the jagged edge reads at this size.
           ctx.strokeStyle = tint([255, 253, 246, 0.95], [225, 238, 255, 0.95]);
-          ctx.lineWidth = 1.5 * scale;
+          ctx.lineWidth = 0.9 * scale;
           ctx.shadowColor = tint([255, 205, 120, 0.95], [120, 175, 255, 0.95]);
-          ctx.shadowBlur = 8 * scale;
+          ctx.shadowBlur = 4 * scale;
           ctx.stroke();
           ctx.stroke();
           ctx.restore();
@@ -629,12 +645,14 @@ export function installSunScene(map: MlMap): () => void {
 
   // The flares keep moving: redraw the scene on its own while the sun is on screen.
   let flareFrame = 0;
-  let lastFlare = 0;
+  let lastStep = -1;
   const animate = (now: number) => {
     flareFrame = requestAnimationFrame(animate);
-    if (now - lastFlare < 1000 / FLARE_FPS[useApp.getState().performance] - 2) return;
+    // A new flare frame each time the 18 fps clock ticks over (the one the flares are drawn at).
+    const step = Math.floor((now / 1000) * FLARE_FPS);
+    if (step === lastStep) return;
     if (!sunScreen || !matrix || document.documentElement.hasAttribute('data-exporting')) return;
-    lastFlare = now;
+    lastStep = step;
     draw();
   };
   flareFrame = requestAnimationFrame(animate);
