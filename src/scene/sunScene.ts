@@ -98,7 +98,10 @@ export function installSunScene(map: MlMap): () => void {
   /** A font string with its pixel size scaled for a locked scene. */
   const font = (weight: number, px: number) => `${weight} ${Math.round(px * labelScale * 10) / 10}px ${HUD}`;
   const tiltCanvas = document.createElement('canvas');
+  /** Where the sun is on screen, for dragging it. */
   let sunScreen: [number, number] | null = null;
+  /** The same, only while the sun is mostly in view: where the lens dirt glows. */
+  let glareAt: [number, number] | null = null;
   let paths: DayPaths | null = null;
   let yearStarts: { key: string; starts: number[] } | null = null;
 
@@ -216,6 +219,7 @@ export function installSunScene(map: MlMap): () => void {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     sunScreen = null;
+    glareAt = null;
     lastSunScreen = null;
     const s = useApp.getState();
     const { compass, sunPath, solstices } = s.overlays;
@@ -460,7 +464,8 @@ export function installSunScene(map: MlMap): () => void {
             ctx.restore();
           }
           // No lens glare from a sun that's mostly behind the terrain.
-          if (cover < 0.5) sunScreen = q;
+          sunScreen = q;
+          if (cover < 0.5) glareAt = q;
           if (hidden) {
             const note = `${formatClock(s.time, tz)} · behind terrain`;
             ctx.font = font(600, 14);
@@ -476,7 +481,7 @@ export function installSunScene(map: MlMap): () => void {
 
     labels.sort((a, b) => b.priority - a.priority);
     for (const l of labels) l.draw();
-    lastSunScreen = sunScreen;
+    lastSunScreen = glareAt;
 
     // Tilt-shift like the map's (scene/lens.ts): blurred toward the top and bottom, sharp in
     // the middle band, so the scene sits at the same focal depth as the terrain under it.
