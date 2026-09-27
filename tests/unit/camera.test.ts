@@ -6,6 +6,7 @@ import {
   normalizeBearing,
   parseLatLng,
   parseReadoutNumber,
+  viewForEye,
   zoomForHeight,
 } from '../../src/map/cameraMath';
 
@@ -72,5 +73,27 @@ describe('camera math', () => {
     expect(parseLatLng('46.60068 11.72598')).toEqual({ lat: 46.60068, lng: 11.72598 });
     expect(parseLatLng('Seceda')).toBeNull();
     expect(parseLatLng('100, 11')).toBeNull();
+  });
+});
+
+describe('standing view', () => {
+  const fov = 36.87;
+  const eye = { lat: 46.6, lng: 11.72, altitude: 2500, bearing: 0, pitch: 88 };
+  const check = (e: typeof eye) => {
+    const v = viewForEye(e, fov, 800, 40);
+    const cam = cameraPosition({ lat: v.lat, lng: v.lng, zoom: v.zoom, pitch: v.pitch, bearing: v.bearing, centerElevation: v.elevation, fov, viewportHeight: 800 });
+    // Within a few centimetres.
+    expect(Math.abs(cam.lat - e.lat) * 111000).toBeLessThan(0.05);
+    expect(Math.abs(cam.lng - e.lng) * 76000).toBeLessThan(0.05);
+    expect(Math.abs(cam.altitude - e.altitude)).toBeLessThan(0.05);
+  };
+  it('puts the camera back at the eye, whichever way it looks', () => {
+    for (const bearing of [0, 73, 180, 301]) for (const pitch of [50, 88, 90, 130]) check({ ...eye, bearing, pitch });
+  });
+  it('looking level, the centre is in the air at eye height, ahead', () => {
+    const v = viewForEye({ ...eye, pitch: 90, bearing: 90 }, fov, 800, 40);
+    expect(v.elevation).toBeCloseTo(2500, 6);
+    expect(v.lat).toBeCloseTo(46.6, 6);
+    expect(v.lng).toBeGreaterThan(11.72);
   });
 });

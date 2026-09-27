@@ -14,6 +14,8 @@ import { setMap } from './mapInstance';
 import { installShadowLayer } from './shadowLayer';
 import { installGoogle3d } from './google3d';
 import { installSteadyCamera } from './steadyCamera';
+import { installStandView } from './standView';
+import { useStand } from '../store/stand';
 
 const STEADY_CAMERA = false;
 import { installSunScene } from '../scene/sunScene';
@@ -123,9 +125,16 @@ export function MapView() {
     };
     const removeMouse = installCameraControls(map, { onDoubleClick: movePin });
     const removeTouch = installTouchControls(map, { onDoubleTap: movePin });
+    const removeStand = installStandView(map);
+    // Standing on the pin's spot: the marker would sit at your feet.
+    const unsubscribeStand = useStand.subscribe((now, prev) => {
+      if (now.active !== prev.active) pin.getElement().style.display = now.active ? 'none' : '';
+    });
     const removeControls = () => {
       removeMouse();
       removeTouch();
+      removeStand();
+      unsubscribeStand();
     };
 
     // Live readout, at most once per frame.

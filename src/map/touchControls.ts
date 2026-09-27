@@ -1,4 +1,5 @@
 import type { LngLat, Map as MlMap } from 'maplibre-gl';
+import { isStanding } from '../store/stand';
 
 // Touch gestures, matching the mouse controls:
 //   1 finger drag   = pan              (MapLibre)
@@ -35,7 +36,9 @@ export function installTouchControls(map: MlMap, opts: { onDoubleTap(lngLat: Lng
   let tapStart: { x: number; y: number; t: number } | null = null;
   let lastTap: { x: number; y: number; t: number } | null = null;
 
+  // The standing view (map/standView.ts) has its own gestures.
   const onStart = (e: TouchEvent) => {
+    if (isStanding()) return;
     if (e.touches.length === 1) {
       tapStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: performance.now() };
     } else {
@@ -52,6 +55,7 @@ export function installTouchControls(map: MlMap, opts: { onDoubleTap(lngLat: Lng
   };
 
   const onMove = (e: TouchEvent) => {
+    if (isStanding()) return;
     if (tapStart && e.touches.length === 1) {
       const t = e.touches[0];
       if (Math.hypot(t.clientX - tapStart.x, t.clientY - tapStart.y) > TAP_SLOP_PX) tapStart = null;
@@ -69,6 +73,7 @@ export function installTouchControls(map: MlMap, opts: { onDoubleTap(lngLat: Lng
   };
 
   const onEnd = (e: TouchEvent) => {
+    if (isStanding()) return;
     if (orbit && e.touches.length < 3) orbit = null;
     if (e.touches.length === 0) {
       if (!map.dragPan.isEnabled()) map.dragPan.enable();

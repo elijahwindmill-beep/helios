@@ -53,6 +53,45 @@ export function cameraPosition(v: ViewParams): { lat: number; lng: number; altit
   };
 }
 
+/** Eye height of a standing person, metres. */
+export const EYE_HEIGHT_M = 1.7;
+
+export interface Eye {
+  lat: number;
+  lng: number;
+  /** Metres above sea level. */
+  altitude: number;
+  bearing: number;
+  /** 90 looks level, less looks down, more looks up. */
+  pitch: number;
+}
+
+/**
+ * The MapLibre view (centre, pivot height, zoom) that puts the camera exactly at `eye`: the
+ * inverse of cameraPosition. MapLibre places a camera behind a centre point; here the centre
+ * is `distance` metres ahead along the line of sight, in the air when looking level or up.
+ * The distance doesn't change the picture, only the near clipping plane (1/75 of it) and
+ * which tile detail loads.
+ */
+export function viewForEye(eye: Eye, fov: number, viewportHeight: number, distance: number) {
+  const rad = Math.PI / 180;
+  const ground = distance * Math.sin(eye.pitch * rad);
+  const north = ground * Math.cos(eye.bearing * rad);
+  const east = ground * Math.sin(eye.bearing * rad);
+  const lat = eye.lat + north / EARTH_RADIUS / rad;
+  const lng = eye.lng + east / (EARTH_RADIUS * Math.cos(eye.lat * rad)) / rad;
+  const cameraToCenterPx = (0.5 * viewportHeight) / Math.tan((fov * rad) / 2);
+  const worldSize = (cameraToCenterPx * 2 * Math.PI * EARTH_RADIUS * Math.cos(lat * rad)) / distance;
+  return {
+    lat,
+    lng,
+    zoom: Math.log2(worldSize / TILE_SIZE),
+    elevation: eye.altitude - distance * Math.cos(eye.pitch * rad),
+    bearing: eye.bearing,
+    pitch: eye.pitch,
+  };
+}
+
 /** Bearing in [0, 360). */
 export function normalizeBearing(deg: number): number {
   const b = deg % 360;

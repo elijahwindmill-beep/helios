@@ -1,6 +1,7 @@
 import { useApp } from '../store/app';
 import { getMap } from '../map/mapInstance';
 import { useTimeline } from '../store/timeline';
+import { StandButton } from './StandView';
 
 export function MapButtons() {
   const bearing = useApp((s) => s.camera?.bearing ?? 0);
@@ -28,6 +29,7 @@ export function MapButtons() {
           <circle cx="12" cy="17" r="0.6" fill="currentColor" />
         </svg>
       </button>
+      <StandButton />
       <button className="icon-button wide-only" aria-label="Zoom in" onClick={() => getMap()?.zoomIn()}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
           <path d="M12 5v14M5 12h14" />

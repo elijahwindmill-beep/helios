@@ -10,7 +10,7 @@ import { parseDate, parseTime } from './parseInput';
 import { TypedField } from './timeControls';
 import { timecode } from './Timeline';
 
-const CAMERA_FIELDS: Array<{ k: Exclude<keyof CameraKey, 'elevation'>; label: string; digits: number }> = [
+const CAMERA_FIELDS: Array<{ k: Exclude<keyof CameraKey, 'elevation' | 'eye'>; label: string; digits: number }> = [
   { k: 'lat', label: 'Latitude', digits: 5 },
   { k: 'lng', label: 'Longitude', digits: 5 },
   { k: 'zoom', label: 'Zoom', digits: 2 },
@@ -177,7 +177,7 @@ export function Inspector() {
         </>
       )}
 
-      <h3 className="hud-label insp-section">Camera</h3>
+      <h3 className="hud-label insp-section">Camera{k.camera.eye ? ' · standing view' : ''}</h3>
       <div className="insp-grid insp-grid-3">
         {CAMERA_FIELDS.map((f) => (
           <label key={f.k} className="insp-field">
@@ -190,7 +190,9 @@ export function Inspector() {
               apply={(s) => {
                 const v = Number(s.replace(',', '.').replace('°', ''));
                 if (!Number.isFinite(v)) return false;
-                set({ camera: { ...k.camera, [f.k]: v } });
+                // A standing-view keyframe keeps its spot when turned; moved by hand it becomes an ordinary one.
+                const moved = f.k !== 'bearing' && f.k !== 'pitch';
+                set({ camera: { ...k.camera, [f.k]: v, ...(moved ? { eye: undefined } : {}) } });
                 return true;
               }}
             />

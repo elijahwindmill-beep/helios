@@ -55,7 +55,7 @@ function cameraVecs(keys: Keyframe[]): Vec[] {
 
 function vecToCamera(v: Vec): CameraKey {
   const [lng, lat] = fromMercator(v[0], v[1]);
-  const cam: CameraKey = { lng, lat, zoom: v[2], bearing: ((v[3] % 360) + 360) % 360, pitch: Math.min(85, Math.max(0, v[4])) };
+  const cam: CameraKey = { lng, lat, zoom: v[2], bearing: ((v[3] % 360) + 360) % 360, pitch: Math.min(150, Math.max(0, v[4])) };
   if (Number.isFinite(v[5])) cam.elevation = v[5];
   return cam;
 }
@@ -180,5 +180,11 @@ export function evaluate(clip: Clip, t: number, timeZone: string): Frame | null 
   } else {
     cam = v[seg].map((x, j) => x + (v[seg + 1][j] - x) * f) as Vec;
   }
-  return { sun, camera: vecToCamera(cam), layers, segment: i };
+  const camera = vecToCamera(cam);
+  const e0 = keys[seg].camera.eye;
+  const e1 = keys[seg + 1].camera.eye;
+  if (e0 && e1) {
+    camera.eye = { lat: e0.lat + (e1.lat - e0.lat) * f, lng: e0.lng + (e1.lng - e0.lng) * f, altitude: e0.altitude + (e1.altitude - e0.altitude) * f };
+  }
+  return { sun, camera, layers, segment: i };
 }

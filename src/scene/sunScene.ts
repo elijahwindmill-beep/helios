@@ -5,6 +5,8 @@ import { dayTimes, HORIZON_GEOMETRIC, seasons } from '../sun/times';
 import { formatClock, startOfZonedDay, timeZoneAt, zonedToUtc } from '../sun/timezone';
 import { solveDateTime, solveTimeOnDay, skyVector, type SkyDirection } from '../sun/solver';
 import { EARTH_RADIUS } from '../map/cameraMath';
+import { cameraEye } from '../map/camera';
+import { isStanding } from '../store/stand';
 import { invert, multiply, pixelRay, raySphere, toScreen, transform, type Mat4, type Vec3 } from './projection';
 
 // The Shadowmap-style sun scene around the pin: compass ring on the ground, today's sun
@@ -27,6 +29,11 @@ const LINE_SHADOW = 'rgba(8,12,18,0.45)';
 
 /** Tilt-shift blur at the top and bottom edges at full lens strength, CSS pixels. */
 const TILT_BLUR_PX = 3;
+
+/** At eye level the dome surrounds the viewer at this radius, metres: the paths sit in the real sky. */
+const EYE_DOME_M = 400;
+/** The camera counts as at eye level below this height over the ground (e.g. standing-view keyframes). */
+const EYE_LEVEL_M = 15;
 
 /** Sun and its reach, in CSS pixels. */
 const SUN_HIT_PX = 28;
@@ -136,6 +143,31 @@ export function installSunScene(map: MlMap): () => void {
     return paths;
   };
 
+  /**
+   * Whether the terrain hides the sun from a viewer: walks out along the sun's bearing to 30 km
+   * and checks whether any ground rises above the line to the sun (with the earth's curve and
+   * the usual refraction). Uses the terrain MapLibre has loaded, so it matches the picture.
+   */
+  let blockedCache: { key: string; hidden: boolean } | null = null;
+  const sunBehindTerrain = (lat: number, lng: number, alt: number, azimuth: number, elevation: number): boolean => {
+    const key = `${lat.toFixed(6)},${lng.toFixed(6)},${alt.toFixed(1)},${azimuth.toFixed(2)},${elevation.toFixed(2)}`;
+    if (blockedCache?.key === key) return blockedCache.hidden;
+    const slope = Math.tan((elevation * Math.PI) / 180);
+    const a = (azimuth * Math.PI) / 180;
+    const cosLat = Math.cos((lat * Math.PI) / 180);
+    let hidden = elevation < 0;
+    for (let d = 20; !hidden && d < 30000; d *= 1.06) {
+      const pLat = lat + ((d * Math.cos(a)) / EARTH_RADIUS) * (180 / Math.PI);
+      const pLng = lng + ((d * Math.sin(a)) / (EARTH_RADIUS * cosLat)) * (180 / Math.PI);
+      const h = map.queryTerrainElevation([pLng, pLat]);
+      if (h === null || h === undefined) continue;
+      const drop = (0.87 * d * d) / (2 * EARTH_RADIUS);
+      if ((h - drop - alt) / d > slope) hidden = true;
+    }
+    blockedCache = { key, hidden };
+    return hidden;
+  };
+
   // ---- Drawing ----
 
   const draw = () => {
@@ -154,8 +186,14 @@ export function installSunScene(map: MlMap): () => void {
     // MapLibre 6's custom-layer world space is x/y in world pixels at the current zoom
     // (Mercator x 512 x 2^zoom) and z in metres (checked against map.project()).
     const pin = s.pin;
-    const ground = map.queryTerrainElevation([pin.lng, pin.lat]) ?? 0;
-    const origin = MercatorCoordinate.fromLngLat([pin.lng, pin.lat]);
+    // At eye level (the standing view) the scene is centred on the viewer instead: the sun and
+    // its paths appear where they really are in the sky, the compass ring on the horizon.
+    const eye = cameraEye(map);
+    const underEye = map.queryTerrainElevation([eye.lng, eye.lat]);
+    const eyeLevel = isStanding() || (underEye !== null && eye.altitude - underEye < EYE_LEVEL_M && eye.pitch > 60);
+    const at = eyeLevel ? eye : pin;
+    const ground = eyeLevel ? eye.altitude : (map.queryTerrainElevation([pin.lng, pin.lat]) ?? 0);
+    const origin = MercatorCoordinate.fromLngLat([at.lng, at.lat]);
     const worldSize = 512 * 2 ** map.getZoom();
     const pxPerMeter = origin.meterInMercatorCoordinateUnits() * worldSize;
     const toWorld = [pxPerMeter, 0, 0, 0, 0, -pxPerMeter, 0, 0, 0, 0, 1, 0, origin.x * worldSize, origin.y * worldSize, ground, 1];
@@ -165,16 +203,21 @@ export function installSunScene(map: MlMap): () => void {
     // Ring size: steady on screen, about 30% of the smaller side, or locked in metres.
     const ringPx = Math.max(110, Math.min(240, 0.3 * Math.min(W, H)));
     const mpp = (2 * Math.PI * EARTH_RADIUS * Math.cos((pin.lat * Math.PI) / 180)) / (512 * 2 ** map.getZoom());
-    radius = s.sunSceneSize ?? ringPx * mpp;
+    radius = eyeLevel ? EYE_DOME_M : (s.sunSceneSize ?? ringPx * mpp);
     lastRadius = radius;
     const R = radius;
     // Locked: the sun, lines and labels grow and shrink with the ring (labels less, to stay legible).
-    const zoomScale = s.sunSceneSize ? Math.min(3, Math.max(0.3, R / mpp / ringPx)) : 1;
+    const zoomScale = s.sunSceneSize && !eyeLevel ? Math.min(3, Math.max(0.3, R / mpp / ringPx)) : 1;
     scale = zoomScale;
     labelScale = Math.min(1.5, Math.max(0.7, Math.sqrt(zoomScale)));
 
     const P = (v: Vec3) => transform(m, [v[0] * R, v[1] * R, v[2] * R]);
-    const S = (v: Vec3) => toScreen(P(v), W, H);
+    // Around the viewer, points far off to the side project to huge screen positions: drop them.
+    const wMin = eyeLevel ? 0.03 * Math.abs(P(skyVector(eye.bearing, eye.pitch - 90)).w) : 0;
+    const S = (v: Vec3) => {
+      const c = P(v);
+      return c.w > wMin ? toScreen(c, W, H) : null;
+    };
 
     // Polyline through dome points, skipping pieces behind the camera.
     const polyline = (pts: Vec3[], closed = false) => {
@@ -308,8 +351,9 @@ export function installSunScene(map: MlMap): () => void {
       const aboveHorizon = sun.elevationTrue > -1;
       const groundDir: Vec3 = [dir[0] / Math.hypot(dir[0], dir[1]), dir[1] / Math.hypot(dir[0], dir[1]), 0];
 
-      // Direction on the ground and the ray from the pin to the sun.
+      // Direction on the ground and the ray from the pin to the sun (not at eye level: they'd start in the camera).
       ctx.save();
+      if (eyeLevel) ctx.globalAlpha = 0;
       ctx.shadowColor = LINE_SHADOW;
       ctx.shadowBlur = 3;
       ctx.setLineDash([2, 4]);
@@ -332,7 +376,24 @@ export function installSunScene(map: MlMap): () => void {
         const el = S([dir[0] * 0.45, dir[1] * 0.45, dir[2] * 0.45]);
         if (el) label(6, () => pill([el[0] + 30, el[1]], `△ ${sun.elevation.toFixed(1)}°`, GLASS, '#ffffff', font(500, 12)));
         const q = S(dir);
-        if (q) {
+        const hidden = eyeLevel && sunBehindTerrain(eye.lat, eye.lng, eye.altitude, sun.azimuth, sun.elevationTrue);
+        if (q && hidden) {
+          // Behind a ridge from here: an outline where it is, and no lens glare.
+          ctx.beginPath();
+          ctx.arc(q[0], q[1], 8.5 * scale, 0, 2 * Math.PI);
+          ctx.setLineDash([2, 3]);
+          ctx.strokeStyle = 'rgba(255,253,246,0.85)';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          ctx.setLineDash([]);
+          const note = `${formatClock(s.time, tz)} · behind terrain`;
+          ctx.font = font(600, 14);
+          // Left edge just clear of the sun (the pill is placed by its centre).
+          const half = (ctx.measureText(note).width + 14) / 2;
+          label(10, () => pill([q[0] + 16 * scale + 6 + half, q[1]], note, GLASS, '#ffffff', font(600, 14)));
+          const r = 14 * scale;
+          placed.push([q[0] - r, q[1] - r, q[0] + r, q[1] + r]);
+        } else if (q) {
           sunScreen = q;
           // A white sun with a warm glow, like Apple Weather.
           const glowR = 40 * scale;

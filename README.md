@@ -108,6 +108,16 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 - The ring badges show when the sun centre crosses a flat horizon (like Shadowmap's badges), so they are a few minutes inside the sunrise/sunset times in the sun card.
 - The time is part of the page link (`&t=…` in UTC), so a shared link opens at the same moment.
 
+### Standing view (like Street View)
+
+- **Drag the figure** (the person button with the map buttons) onto the map and let go: the camera flies down and stands there at eye height (1.7 m), looking the way the map faced. Clicking the figure stands at the pin instead; click it again, press **Esc** or **Leave** to fly back to where you were.
+- **Look around:** drag the view (the scene follows the pointer, like Street View). **W A S D** walk (Shift runs), **Q E** turn, **double-click** (double-tap on a phone) the ground to walk there.
+- **Lens:** the slider in the standing-view bar (or scrolling) goes from a 14 mm wide angle to 100 mm, shown as full-frame focal length and vertical field of view.
+- **The sun from where you stand:** the sun, its path and the solstice paths sit in the real sky around you, and the compass ring lies along the horizon. When a ridge hides the sun from that spot, it shows as a dashed outline marked **behind terrain**. Scrub the time to watch the shadows cross the ground you're standing on.
+- The standing spot becomes the pin (so the sun times are for it), and the pin marker hides while you stand there. The camera readout shows the spot and the eye height; type a height (e.g. `3` for a tripod on a wall) to raise or lower the eye.
+- **Keyframes set while standing** keep that exact spot: between two of them the camera turns on the spot or walks, instead of swinging around, and the terrain clearance leaves it at eye height. Handy for a time-lapse of the shadows from one viewpoint.
+- The picture is only as good as the elevation data and imagery at your feet: close up, the satellite image is blurry and small things (trees, buildings, boulders) aren't there unless Google 3D tiles are on.
+
 ### Your routes, places and photos
 
 In the layer panel under **Your layers** (on a phone: the Layers button), or from the tool dock at the bottom right (Route, Place, Import):
@@ -151,6 +161,7 @@ In the layer panel under **Your layers** (on a phone: the Layers button), or fro
 | Double-tap | Move the pin |
 | 2 fingers: pinch / twist | Move closer or further / turn the view |
 | 3 fingers drag | Orbit: up/down tilts, left/right turns |
+| Standing view: 1 finger drag / double-tap | Look around / walk there |
 
 The map fills the screen. The sun summary sits under the search bar (tap the arrow for the sun details, the 9-day forecast and the sliders), the sun chart is at the bottom, and the layers button opens the layer panel and camera readout as a sheet. A short tutorial shows the gestures on the first visit; the **?** button brings it back (on a computer it shows the mouse controls).
 
@@ -228,7 +239,7 @@ Libraries: MapLibre GL JS (BSD-3), maplibre-contour (BSD-3), React (MIT), Zustan
 
 ```
 src/
-  map/     MapLibre setup, style and base layers, camera controls, tile and elevation sources, shadow layer, performance modes, optional Google 3D tiles
+  map/     MapLibre setup, style and base layers, camera controls, tile and elevation sources, shadow layer, performance modes, standing view, optional Google 3D tiles
   scene/   3D sun scene: compass ring, sun paths, sun, labels, dragging; golden/blue hour light colour; lens look
   sun/     sun position, sunrise and sunset, seasons, timezones, inverse solver for dragging
   terrain/ elevation tiles, height mosaic, shadow ray-march (CPU reference and GPU shader)

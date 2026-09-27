@@ -3,6 +3,9 @@ import { useTimeline } from '../store/timeline';
 import type { Map as MlMap } from 'maplibre-gl';
 import { getMap } from '../map/mapInstance';
 import { snapCenterElevation } from '../map/steadyCamera';
+import { putEye } from '../map/standView';
+import { cameraEye } from '../map/camera';
+import { isStanding } from '../store/stand';
 import { timeZoneAt } from '../sun/timezone';
 import type { Overlays } from '../map/style';
 import { clipDuration, type CameraKey, type Keyframe } from './model';
@@ -15,6 +18,10 @@ export function captureNow(): Pick<Keyframe, 'sun' | 'camera'> {
   const map = getMap()!;
   const c = map.getCenter();
   const camera: CameraKey = { lng: c.lng, lat: c.lat, zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch(), elevation: map.getCenterElevation() };
+  if (isStanding()) {
+    const eye = cameraEye(map);
+    camera.eye = { lat: eye.lat, lng: eye.lng, altitude: eye.altitude };
+  }
   return { sun: useApp.getState().time, camera };
 }
 
@@ -55,7 +62,9 @@ export function applyFrame(frame: Frame) {
   if (!map) return;
   // With the pivot height from the keyframes the camera glides; without it MapLibre would put
   // the pivot on the ground under the centre every frame, and the camera would ride each bump.
-  if (c.elevation !== undefined) holdPivot(map);
+  if (c.elevation !== undefined || c.eye) holdPivot(map);
+  // Made in the standing view: the camera goes exactly where it stood.
+  if (c.eye) return putEye(map, { ...c.eye, bearing: c.bearing, pitch: c.pitch });
   map.jumpTo({ center: [c.lng, c.lat], zoom: c.zoom, bearing: c.bearing, pitch: c.pitch, ...(c.elevation !== undefined ? { elevation: c.elevation } : {}) });
 }
 
@@ -64,7 +73,7 @@ export function frameAt(t: number): Frame | null {
   const clip = useTimeline.getState().activeClip();
   const f = evaluate(clip, t, timeZoneAt(pin.lat, pin.lng));
   // Raised where the path would run into the ground (timeline/clearance.ts).
-  if (f && f.camera.elevation !== undefined && lift && lift.clip === clip && lift.viewportHeight === getMap()?.getCanvas().clientHeight) {
+  if (f && f.camera.elevation !== undefined && !f.camera.eye && lift && lift.clip === clip && lift.viewportHeight === getMap()?.getCanvas().clientHeight) {
     f.camera.elevation += liftAt(lift, t);
   }
   return f;

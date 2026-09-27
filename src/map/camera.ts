@@ -1,5 +1,6 @@
 import type { Map as MlMap } from 'maplibre-gl';
-import { cameraPosition, normalizeBearing, zoomForHeight, type CameraState } from './cameraMath';
+import { isStanding } from '../store/stand';
+import { cameraPosition, normalizeBearing, zoomForHeight, type CameraState, type Eye } from './cameraMath';
 
 /** Reads the live camera. Height is measured to the ground directly under the camera. */
 export function readCamera(map: MlMap): CameraState {
@@ -19,9 +20,11 @@ export function readCamera(map: MlMap): CameraState {
   // fall back to the ground at the view centre.
   const below = map.queryTerrainElevation([cam.lng, cam.lat]);
   const ground = below ?? centerElevation;
+  // In the standing view the view centre is in the air ahead: report where the viewer stands.
+  const at = isStanding() ? cam : center;
   return {
-    lat: center.lat,
-    lng: center.lng,
+    lat: at.lat,
+    lng: at.lng,
     height: cam.altitude - ground,
     altitude: cam.altitude,
     bearing: normalizeBearing(map.getBearing()),
@@ -44,4 +47,20 @@ export function setCameraHeight(map: MlMap, target: number) {
     if (!(above > 0) || !(wanted > 0)) break;
     map.jumpTo({ zoom: zoomForHeight(map.getZoom(), above, wanted) });
   }
+}
+
+/** Where the camera itself is and which way it looks. */
+export function cameraEye(map: MlMap): Eye {
+  const center = map.getCenter();
+  const cam = cameraPosition({
+    lat: center.lat,
+    lng: center.lng,
+    zoom: map.getZoom(),
+    pitch: map.getPitch(),
+    bearing: map.getBearing(),
+    centerElevation: map.getCenterElevation(),
+    fov: map.getVerticalFieldOfView(),
+    viewportHeight: map.getCanvas().clientHeight,
+  });
+  return { ...cam, bearing: map.getBearing(), pitch: map.getPitch() };
 }

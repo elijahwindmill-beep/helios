@@ -1,4 +1,5 @@
 import type { LngLat, Map as MlMap } from 'maplibre-gl';
+import { isStanding } from '../store/stand';
 
 // MapLibre already gives the Google Earth feel for the core gestures:
 //   left-drag = pan, right-drag = orbit (x = bearing, y = pitch), wheel = dolly toward cursor.
@@ -29,7 +30,7 @@ export function installCameraControls(
   // MapLibre's pan handler (on the inner canvas container) never sees the drag.
   let orbit: { x: number; y: number } | null = null;
   const onMouseDown = (e: MouseEvent) => {
-    if (e.button !== 0 || !(e.metaKey || e.ctrlKey)) return;
+    if (e.button !== 0 || !(e.metaKey || e.ctrlKey) || isStanding()) return;
     if (!(e.target instanceof HTMLCanvasElement)) return;
     e.stopPropagation();
     e.preventDefault();
@@ -51,7 +52,7 @@ export function installCameraControls(
 
   // Alt + wheel = fine pitch instead of dolly.
   const onWheel = (e: WheelEvent) => {
-    if (!e.altKey) return;
+    if (!e.altKey || isStanding()) return;
     e.stopPropagation();
     e.preventDefault();
     map.jumpTo({ pitch: map.getPitch() - e.deltaY * FINE_PITCH_PER_PX });
@@ -61,7 +62,7 @@ export function installCameraControls(
   // first, so merge the targets while a reset is still animating.
   let reset: { bearing?: number; pitch?: number } = {};
   const onKey = (e: KeyboardEvent) => {
-    if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
+    if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target) || isStanding()) return;
     const key = e.key.toLowerCase();
     if (key !== 'r' && key !== 't') return;
     reset = { ...reset, ...(key === 'r' ? { bearing: 0 } : { pitch: 0 }) };
@@ -69,7 +70,7 @@ export function installCameraControls(
     map.once('moveend', () => (reset = {}));
   };
 
-  const onDbl = (e: { lngLat: LngLat }) => opts.onDoubleClick(e.lngLat);
+  const onDbl = (e: { lngLat: LngLat }) => !isStanding() && opts.onDoubleClick(e.lngLat);
 
   container.addEventListener('mousedown', onMouseDown, true);
   container.addEventListener('wheel', onWheel, { capture: true, passive: false });

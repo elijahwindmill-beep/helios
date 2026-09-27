@@ -14,6 +14,8 @@ import type { Clip } from './model';
 
 /** How close the camera may come to the ground, metres. */
 export const CLEARANCE_M = 30;
+/** Next to a keyframe made in the standing view the camera is meant to be low: just stay above ground. */
+const EYE_CLEARANCE_M = 1;
 /** Samples per second along the clip. */
 const RATE = 10;
 /** The swell reaches this far either side of a close pass, seconds. */
@@ -76,11 +78,12 @@ export async function computeLift(clip: Clip, timeZone: string, fov: number, vie
   const need = await Promise.all(
     Array.from({ length: n }, async (_, i) => {
       const f = evaluate(clip, i / RATE, timeZone);
-      if (!f || f.camera.elevation === undefined) return 0;
+      if (!f || f.camera.elevation === undefined || f.camera.eye) return 0;
+      const nearEye = !!(clip.keyframes[f.segment]?.camera.eye || clip.keyframes[f.segment + 1]?.camera.eye);
       const c = f.camera;
       const cam = cameraPosition({ lat: c.lat, lng: c.lng, zoom: c.zoom, pitch: c.pitch, bearing: c.bearing, centerElevation: c.elevation!, fov, viewportHeight });
       const ground = await groundAt(cam.lat, cam.lng);
-      return ground === null ? 0 : Math.max(0, ground + CLEARANCE_M - cam.altitude);
+      return ground === null ? 0 : Math.max(0, ground + (nearEye ? EYE_CLEARANCE_M : CLEARANCE_M) - cam.altitude);
     }),
   );
   return { clip, viewportHeight, samples: liftEnvelope(need, REACH_S * RATE) };

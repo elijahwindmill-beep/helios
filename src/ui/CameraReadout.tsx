@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useApp } from '../store/app';
 import { getMap } from '../map/mapInstance';
 import { setCameraHeight } from '../map/camera';
+import { adjustStand } from '../map/standView';
+import { isStanding } from '../store/stand';
 import { formatHeight, parseReadoutNumber, type CameraState } from '../map/cameraMath';
 
 type Field = 'lat' | 'lng' | 'height' | 'bearing' | 'pitch';
@@ -17,6 +19,11 @@ const FIELDS: Array<{ id: Field; label: string; format(c: CameraState): string }
 function apply(field: Field, value: number) {
   const map = getMap();
   if (!map) return;
+  // Standing: move the viewer, set the eye height, or turn.
+  if (isStanding()) {
+    if ((field === 'lat' && Math.abs(value) > 85) || (field === 'lng' && Math.abs(value) > 180) || (field === 'height' && !(value > 0))) return;
+    return adjustStand({ [field]: value });
+  }
   const c = map.getCenter();
   switch (field) {
     case 'lat':

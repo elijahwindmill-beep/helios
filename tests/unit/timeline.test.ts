@@ -80,6 +80,20 @@ describe('timeline interpolation', () => {
     expect(evaluate(s, 5, TZ)!.camera.lng).toBeCloseTo(11.8, 9);
   });
 
+  it('standing-view keyframes: the viewer turns on the spot, pitch above the horizon kept', () => {
+    const eye = { lat: 46.6, lng: 11.72, altitude: 2500 };
+    const stand = (bearing: number, pitch: number) => ({ ...cam, zoom: 20.7, bearing, pitch, elevation: 2500, eye });
+    const c = clip([key(0, '2026-09-27T07:00:00Z', { camera: stand(0, 88) }), key(10, '2026-09-27T09:00:00Z', { camera: stand(120, 110) })]);
+    const mid = evaluate(c, 5, TZ)!;
+    expect(mid.camera.eye).toEqual(eye);
+    expect(mid.camera.bearing).toBeCloseTo(60, 6);
+    expect(mid.camera.pitch).toBeCloseTo(99, 6);
+    // Into an ordinary keyframe the camera flies as usual.
+    const mixed = clip([key(0, '2026-09-27T07:00:00Z', { camera: stand(0, 88) }), key(10, '2026-09-27T09:00:00Z')]);
+    expect(evaluate(mixed, 5, TZ)!.camera.eye).toBeUndefined();
+    expect(evaluate(mixed, 0, TZ)!.camera.eye).toEqual(eye);
+  });
+
   it('layer switches carry forward from their keyframe', () => {
     const c = clip([key(0, '2026-09-26T08:00:00Z', { layers: { routes: false } }), key(5, '2026-09-26T09:00:00Z', { layers: { routes: true, photos: false } }), key(10, '2026-09-26T10:00:00Z')]);
     expect(evaluate(c, 2, TZ)!.layers).toEqual({ routes: false });

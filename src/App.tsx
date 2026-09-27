@@ -22,6 +22,8 @@ import { ExportDialog } from './ui/ExportDialog';
 import { useTimeline } from './store/timeline';
 import { useApp } from './store/app';
 import { useTheme } from './ui/useTheme';
+import { StandBar } from './ui/StandView';
+import { useStand } from './store/stand';
 
 export function App() {
   // Desktop: a HUD around the map (top bar, forecast, alerts, dock). Phone: compact cards.
@@ -31,6 +33,7 @@ export function App() {
   const lens = useApp((s) => (s.overlays.lens ? s.lensStrength : 0));
   const timeline = useTimeline((s) => s.open);
   const inspecting = useTimeline((s) => s.open && s.selected !== null);
+  const standing = useStand((s) => s.active);
   useTheme();
   return (
     <div
@@ -42,6 +45,7 @@ export function App() {
       data-hide-bottom={!hud.bottom || undefined}
       data-timeline={timeline || undefined}
       data-inspector={inspecting || undefined}
+      data-standing={standing || undefined}
       style={{ '--lens': lens } as React.CSSProperties}
     >
       <MapView />
@@ -68,6 +72,7 @@ export function App() {
       <LensOverlay />
       {narrow ? <ClearViewButton /> : <HudTabs />}
       <DrawBar />
+      <StandBar />
       <LayerNotice />
       <PhotoViewer />
       <SpotViewer />

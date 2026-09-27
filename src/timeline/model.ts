@@ -33,6 +33,12 @@ export interface CameraKey {
    * Older keyframes lack it until playback fills it in.
    */
   elevation?: number;
+  /**
+   * Set on keyframes made in the standing view: where the camera itself stood, metres above
+   * sea level. Playback puts the camera exactly there (bearing and pitch still apply), so
+   * between two of these the viewer turns on the spot or walks instead of swinging around.
+   */
+  eye?: { lat: number; lng: number; altitude: number };
 }
 
 export interface Keyframe {
