@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { setFlareClock } from '../scene/sunScene';
 import { BufferTarget, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH, canEncodeVideo } from 'mediabunny';
 import type { Map as MlMap } from 'maplibre-gl';
 import { useApp } from '../store/app';
@@ -211,7 +212,9 @@ export async function runExport() {
     for (let i = 0; i < total; i++) {
       if (cancelled) break;
       const f = frameAt(i / fps);
+      setFlareClock(i / fps);
       if (f) applyFrame(f);
+      map.triggerRepaint();
       await settle(map);
       compose(ctx, map, i, width / cssW, noise, tmp);
       // Development only: lets a test look at each finished frame.
@@ -239,6 +242,7 @@ export async function runExport() {
     if (saved.style === null) container.removeAttribute('style');
     else container.setAttribute('style', saved.style);
     delete document.documentElement.dataset.exporting;
+    setFlareClock(null);
     map.setPixelRatio(saved.ratio);
     map.resize();
     seek(saved.playhead);

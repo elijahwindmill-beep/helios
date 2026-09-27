@@ -32,6 +32,40 @@ const LINE_SHADOW = 'rgba(8,12,18,0.45)';
 /** Tilt-shift blur at the top and bottom edges at full lens strength, CSS pixels. */
 const TILT_BLUR_PX = 3;
 
+/**
+ * Flares: the sun's rim boils gently and slow tongues of light lick out from it, like
+ * prominences. Both are a few sine waves around the rim drifting at their own speeds (a cheap,
+ * smooth, looping turbulence), always moving.
+ */
+interface Wave {
+  k: number;
+  a: number;
+  p: number;
+  w: number;
+}
+function waves(seed: number, n: number, lo: number, hi: number, fall: number): Wave[] {
+  let x = seed;
+  const rnd = () => (x = (x * 16807) % 2147483647) / 2147483647;
+  const out: Wave[] = [];
+  for (let i = 0; i < n; i++) {
+    const k = Math.round(lo + (hi - lo) * rnd());
+    out.push({ k, a: 1 / Math.pow(k, fall), p: rnd() * 2 * Math.PI, w: (rnd() - 0.5) * 2.4 });
+  }
+  const sum = out.reduce((a, o) => a + o.a, 0);
+  return out.map((o) => ({ ...o, a: o.a / sum }));
+}
+const BOIL = waves(7, 9, 5, 28, 0.6);
+const TONGUES = waves(19, 5, 2, 7, 0.3);
+const turbulence = (ws: Wave[], angle: number, t: number) => ws.reduce((a, o) => a + o.a * Math.sin(o.k * angle + o.p + o.w * t), 0);
+/** Redraws per second for the flares (Smooth performance: fewer). */
+const FLARE_FPS = { smooth: 15, balanced: 30, detailed: 30 } as const;
+
+/** Video export sets the flare clock to each frame's time, so the flares move the same in every export. */
+let flareClock: number | null = null;
+export const setFlareClock = (seconds: number | null) => {
+  flareClock = seconds;
+};
+
 type Rgba = [number, number, number, number];
 const rgba = ([r, g, b, a]: Rgba) => `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${a.toFixed(3)})`;
 
@@ -435,9 +469,35 @@ export function installSunScene(map: MlMap): () => void {
           ctx.arc(q[0], q[1], discR, 0, 2 * Math.PI, true);
           ctx.fillStyle = glow;
           ctx.fill('evenodd');
+          // Flares, sized to the sun (never so small they vanish).
+          const tau = flareClock ?? performance.now() / 1000;
+          const f = Math.max(0.4, discR / 34);
+          const outline = (r: number, shape: (angle: number) => number) => {
+            for (let i = 0; i <= 96; i++) {
+              const a = (i / 96) * 2 * Math.PI;
+              const rr = r + shape(a);
+              const x = q[0] + Math.cos(a) * rr;
+              const y = q[1] + Math.sin(a) * rr;
+              if (i) ctx.lineTo(x, y);
+              else ctx.moveTo(x, y);
+            }
+            ctx.closePath();
+          };
+          ctx.save();
+          ctx.globalAlpha = 0.85;
+          ctx.beginPath();
+          outline(discR, (a) => 2 * f + 130 * f * Math.max(0, turbulence(TONGUES, a, tau * 0.9)) ** 1.6);
+          ctx.arc(q[0], q[1], discR, 0, 2 * Math.PI, true);
+          const flare = ctx.createRadialGradient(q[0], q[1], discR, q[0], q[1], discR + 55 * f);
+          flare.addColorStop(0, tint([255, 248, 225, 1], [215, 232, 255, 1]));
+          flare.addColorStop(0.35, tint([255, 214, 140, 0.75], [160, 200, 250, 0.7]));
+          flare.addColorStop(1, tint([245, 166, 35, 0], [110, 160, 230, 0]));
+          ctx.fillStyle = flare;
+          ctx.fill('evenodd');
+          ctx.restore();
           ctx.save();
           ctx.beginPath();
-          ctx.arc(q[0], q[1], discR, 0, 2 * Math.PI);
+          outline(discR, (a) => Math.max(1, 3 * f) * turbulence(BOIL, a, tau * 2));
           ctx.strokeStyle = tint([255, 253, 246, 0.95], [225, 238, 255, 0.95]);
           ctx.lineWidth = 1.5 * scale;
           ctx.shadowColor = tint([255, 205, 120, 0.95], [120, 175, 255, 0.95]);
@@ -566,6 +626,18 @@ export function installSunScene(map: MlMap): () => void {
     },
   };
   map.addLayer(layer);
+
+  // The flares keep moving: redraw the scene on its own while the sun is on screen.
+  let flareFrame = 0;
+  let lastFlare = 0;
+  const animate = (now: number) => {
+    flareFrame = requestAnimationFrame(animate);
+    if (now - lastFlare < 1000 / FLARE_FPS[useApp.getState().performance] - 2) return;
+    if (!sunScreen || !matrix || document.documentElement.hasAttribute('data-exporting')) return;
+    lastFlare = now;
+    draw();
+  };
+  flareFrame = requestAnimationFrame(animate);
 
   const unsubscribe = useApp.subscribe((now, prev) => {
     if (now.time !== prev.time || now.pin !== prev.pin || now.overlays !== prev.overlays || now.sunSceneSize !== prev.sunSceneSize || now.lensStrength !== prev.lensStrength) map.triggerRepaint();
@@ -699,6 +771,7 @@ export function installSunScene(map: MlMap): () => void {
   return () => {
     unsubscribe();
     cancelAnimationFrame(frame);
+    cancelAnimationFrame(flareFrame);
     map.off('resize', resize);
     if (map.getLayer('sun-scene')) map.removeLayer('sun-scene');
     canvas.remove();
