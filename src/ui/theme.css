@@ -313,6 +313,8 @@ button {
 /* ---------- Search ---------- */
 .search {
   position: absolute;
+  /* Its results drop down over the sun card on a phone. */
+  z-index: 6;
   left: 312px;
   top: 24px;
   width: min(420px, calc(100% - 336px));
@@ -3249,4 +3251,18 @@ html[data-exporting] .maplibregl-ctrl-bottom-right {
 /* The clear-view button would sit on the sheet's switches. */
 .app[data-layers-open] .clear-view {
   display: none;
+}
+
+/* Phone: search results over the sun card need a solid backing to be readable. */
+.app[data-layout='compact'] .search-results {
+  background: var(--surface-solid);
+  max-height: min(360px, 55dvh);
+}
+
+/* The sun's core: the map behind it as a black-and-white negative (scene/sunScene.ts). */
+.sun-core {
+  position: absolute;
+  pointer-events: none;
+  -webkit-backdrop-filter: grayscale(1) invert(1);
+  backdrop-filter: grayscale(1) invert(1);
 }

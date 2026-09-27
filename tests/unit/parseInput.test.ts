@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseDate, parseTime } from '../../src/ui/parseInput';
+import { parseDate, parseTime, shortPlace } from '../../src/ui/parseInput';
 
 describe('parseTime', () => {
   it.each([
@@ -40,5 +40,13 @@ describe('parseDate', () => {
   });
   it.each(['', '31 Feb 2026', '29 Feb 2026', '12 Oc 2026', '13/13/2026', 'tomorrow'])('rejects %s', (text) => {
     expect(parseDate(text, 2026)).toBeNull();
+  });
+});
+
+describe('search result places', () => {
+  it('keeps the nearest places and the country', () => {
+    expect(shortPlace('Matterhorn, Zermatt, Visp, Oberwallis, Valais/Wallis, 3920, Switzerland', 'Matterhorn')).toBe('Zermatt, Visp, Switzerland');
+    expect(shortPlace('Matterhorn', 'Matterhorn')).toBe('');
+    expect(shortPlace('Seceda, Ortisei, Italia', 'Seceda')).toBe('Ortisei, Italia');
   });
 });

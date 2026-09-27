@@ -58,3 +58,13 @@ export function parseDate(text: string, fallbackYear: number): { year: number; m
   }
   return null;
 }
+
+/**
+ * "Matterhorn, Zermatt, Visp, Oberwallis, Valais/Wallis, 3920, Switzerland" → "Zermatt, Visp,
+ * Switzerland": the nearest two places and the country, so the country fits on a phone.
+ */
+export function shortPlace(displayName: string, name: string): string {
+  const parts = displayName.split(',').map((p) => p.trim()).filter((p) => p && p !== name && !/^[\d\s-]+$/.test(p));
+  if (parts.length <= 3) return parts.join(', ');
+  return [...parts.slice(0, 2), parts[parts.length - 1]].join(', ');
+}

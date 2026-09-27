@@ -127,6 +127,9 @@ function pathRuns(dayStart: number, dayEnd: number, lat: number, lng: number): P
 // Where the sun was last drawn on screen (CSS px in the map), for the lens dirt glow.
 let lastSunScreen: [number, number] | null = null;
 export const getSunScreen = () => lastSunScreen;
+// The sun's jagged rim as last drawn (CSS px in the map), for its black-and-white negative core.
+let lastCore: Array<[number, number]> | null = null;
+export const getSunCore = () => lastCore;
 // The dome radius last drawn, metres: what "Lock size" freezes.
 let lastRadius: number | null = null;
 export const getSunSceneRadius = () => lastRadius;
@@ -138,6 +141,34 @@ export function installSunScene(map: MlMap): () => void {
   canvas.setAttribute('aria-hidden', 'true');
   container.insertBefore(canvas, map.getCanvas().nextSibling);
   const ctx = canvas.getContext('2d')!;
+  // Inside the rim the map shows as a black-and-white negative (a difference blend against white,
+  // without the colour): a filter on whatever is behind this element, clipped to the rim.
+  const core = document.createElement('div');
+  core.className = 'sun-core';
+  core.setAttribute('aria-hidden', 'true');
+  container.insertBefore(core, canvas);
+  const placeCore = (pts: Array<[number, number]> | null) => {
+    if (!pts) {
+      core.style.display = 'none';
+      return;
+    }
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
+    for (const [x, y] of pts) {
+      x0 = Math.min(x0, x);
+      y0 = Math.min(y0, y);
+      x1 = Math.max(x1, x);
+      y1 = Math.max(y1, y);
+    }
+    core.style.display = '';
+    core.style.left = `${x0}px`;
+    core.style.top = `${y0}px`;
+    core.style.width = `${x1 - x0}px`;
+    core.style.height = `${y1 - y0}px`;
+    core.style.clipPath = `polygon(${pts.map(([x, y]) => `${(x - x0).toFixed(1)}px ${(y - y0).toFixed(1)}px`).join(',')})`;
+  };
 
   let matrix: Mat4 | null = null;
   let localToClip: Float64Array | null = null;
@@ -230,6 +261,8 @@ export function installSunScene(map: MlMap): () => void {
     sunScreen = null;
     glareAt = null;
     lastSunScreen = null;
+    lastCore = null;
+    placeCore(null);
     const s = useApp.getState();
     const { compass, sunPath, solstices } = s.overlays;
     if (!matrix || !(compass || sunPath || solstices)) return;
@@ -512,7 +545,13 @@ export function installSunScene(map: MlMap): () => void {
           ctx.restore();
           ctx.save();
           ctx.beginPath();
-          outline(discR, (a) => discR * 0.09 * (turbulence(BOIL, a, tau * 2) + 0.35 * turbulence(FINE, a, tau * 3)), 120);
+          const rimAt = (a: number) => discR * 0.09 * (turbulence(BOIL, a, tau * 2) + 0.35 * turbulence(FINE, a, tau * 3));
+          outline(discR, rimAt, 120);
+          lastCore = Array.from({ length: 120 }, (_, i) => {
+            const a = (i / 120) * 2 * Math.PI;
+            const rr = discR + rimAt(a);
+            return [q[0] + Math.cos(a) * rr, q[1] + Math.sin(a) * rr] as [number, number];
+          });
           // A thin line and a tight glow, so the jagged edge reads at this size.
           ctx.strokeStyle = tint([255, 253, 246, 0.95], [225, 238, 255, 0.95]);
           ctx.lineWidth = 0.9 * scale;
@@ -537,6 +576,7 @@ export function installSunScene(map: MlMap): () => void {
       }
     }
 
+    placeCore(lastCore);
     labels.sort((a, b) => b.priority - a.priority);
     for (const l of labels) l.draw();
     lastSunScreen = glareAt;
@@ -793,6 +833,7 @@ export function installSunScene(map: MlMap): () => void {
     map.off('resize', resize);
     if (map.getLayer('sun-scene')) map.removeLayer('sun-scene');
     canvas.remove();
+    core.remove();
     outer.removeEventListener('mousedown', onDown, true);
     outer.removeEventListener('touchstart', onDown, true);
     window.removeEventListener('mousemove', onMove);

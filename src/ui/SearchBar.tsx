@@ -3,6 +3,7 @@ import { useApp } from '../store/app';
 import { getMap } from '../map/mapInstance';
 import { parseLatLng } from '../map/cameraMath';
 import { useLayers } from '../store/layers';
+import { shortPlace } from './parseInput';
 
 interface Result {
   name: string;
@@ -18,12 +19,30 @@ async function searchNominatim(q: string): Promise<Result[]> {
   const res = await fetch(url, { headers: { Accept: 'application/json' } });
   if (!res.ok) throw new Error(`Search failed (${res.status})`);
   const rows: Array<{ name: string; display_name: string; lat: string; lon: string }> = await res.json();
-  return rows.map((r) => ({
-    name: r.name || r.display_name.split(',')[0],
-    detail: r.display_name,
-    lat: Number(r.lat),
-    lng: Number(r.lon),
-  }));
+  return rows.map((r) => {
+    const name = r.name || r.display_name.split(',')[0];
+    return { name, detail: shortPlace(r.display_name, name), lat: Number(r.lat), lng: Number(r.lon) };
+  });
+}
+
+/**
+ * Photon (komoot's OpenStreetMap search) forgives more, e.g. a missing word or a partial name:
+ * asked only when Nominatim finds nothing.
+ */
+async function searchPhoton(q: string): Promise<Result[]> {
+  const res = await fetch(`https://photon.komoot.io/api/?limit=6&q=${encodeURIComponent(q)}`);
+  if (!res.ok) throw new Error(`Search failed (${res.status})`);
+  const data: { features: Array<{ geometry: { coordinates: [number, number] }; properties: Record<string, string | undefined> }> } = await res.json();
+  return data.features.map((f) => {
+    const p = f.properties;
+    const name = p.name ?? p.city ?? p.state ?? 'Unnamed place';
+    return {
+      name,
+      detail: [name, p.city ?? p.county, p.state, p.country].filter((v, i, a) => v && a.indexOf(v) === i).join(', '),
+      lat: f.geometry.coordinates[1],
+      lng: f.geometry.coordinates[0],
+    };
+  });
 }
 
 export function SearchBar() {
@@ -45,7 +64,8 @@ export function SearchBar() {
     if (coords) return go({ ...coords, name: '' });
     setStatus('Searching…');
     try {
-      const found = await searchNominatim(q);
+      let found = await searchNominatim(q);
+      if (!found.length) found = await searchPhoton(q).catch(() => []);
       setResults(found);
       setStatus(found.length ? '' : 'No places found');
     } catch (err) {
@@ -56,23 +76,33 @@ export function SearchBar() {
 
   return (
     <div className="search">
-      <label className="search-box">
+      {/* A form, so a phone keyboard's Search key submits it. */}
+      <form
+        className="search-box"
+        role="search"
+        onSubmit={(e) => {
+          e.preventDefault();
+          // Put the phone keyboard away so the results aren't hidden under it.
+          e.currentTarget.querySelector('input')?.blur();
+          void submit();
+        }}
+      >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
           <circle cx="11" cy="11" r="6.5" />
           <path d="M16 16l4.5 4.5" />
         </svg>
         <input
           type="search"
+          enterKeyHint="search"
           aria-label="Search place or paste lat, lng"
           placeholder="Search a place or paste lat, lng"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') submit();
             if (e.key === 'Escape') setResults(null);
           }}
         />
-      </label>
+      </form>
       {(results?.length || status) && (
         <div className="panel search-results" role="listbox" aria-label="Search results">
           {status && <p className="search-status">{status}</p>}

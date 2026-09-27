@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { setFlareClock } from '../scene/sunScene';
+import { getSunCore, setFlareClock } from '../scene/sunScene';
 import { BufferTarget, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH, canEncodeVideo } from 'mediabunny';
 import type { Map as MlMap } from 'maplibre-gl';
 import { useApp } from '../store/app';
@@ -104,6 +104,18 @@ function compose(out: CanvasRenderingContext2D, map: MlMap, frameIndex: number, 
   out.globalCompositeOperation = 'source-over';
   out.globalAlpha = 1;
   out.drawImage(map.getCanvas(), 0, 0, W, H);
+  // The sun's core: the map inside its rim as a black-and-white negative (the page does it with a filter).
+  const core = getSunCore();
+  if (core) {
+    out.save();
+    out.beginPath();
+    core.forEach(([x, y], i) => (i ? out.lineTo(x * cssScale, y * cssScale) : out.moveTo(x * cssScale, y * cssScale)));
+    out.closePath();
+    out.clip();
+    out.filter = 'grayscale(1) invert(1)';
+    out.drawImage(map.getCanvas(), 0, 0, W, H);
+    out.restore();
+  }
   const scene = map.getContainer().querySelector<HTMLCanvasElement>('canvas.sun-scene');
   if (scene) out.drawImage(scene, 0, 0, W, H);
 

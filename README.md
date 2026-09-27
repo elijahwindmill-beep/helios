@@ -104,7 +104,7 @@ Extra tasks, in the order they'll be built. Each runs after the phase it names.
 - With the lens look on, the sun scene gets the same tilt-shift blur toward the top and bottom as the map, so it sits at the terrain's focal depth (also in exported video).
 - Around the pin: a **compass ring** (ticks every 10°, N/E/S/W), today's **sun path** in amber with sunrise and sunset badges where it meets the horizon, the **solstice** paths (dashed) and the **equinox** path (dotted). Each has its own switch in the layer panel.
 - The **sun** sits on its path with a line down to the pin, its elevation (△) and its azimuth on the ring.
-- The **sun** is drawn see-through: a glowing crown and rim around an empty disc, so the terrain behind it shows. Its rim boils with a fine jagged edge and thin spikes of light bristle from it like flare filaments, always moving at a slightly stuttering 18 frames a second (in exported video they follow the video's clock, so every export is the same). It's warm in the open and turns a cold blue as it slips behind the terrain as seen from the pin (or from you, in the standing view), with the time reading **behind terrain** once it's gone.
+- The **sun** is drawn see-through: a glowing crown and rim around its disc, and inside the rim the terrain behind it shows as a black-and-white negative (like a difference blend against white, without the colour), in the page and in exported video. Its rim boils with a fine jagged edge and thin spikes of light bristle from it like flare filaments, always moving at a slightly stuttering 18 frames a second (in exported video they follow the video's clock, so every export is the same). It's warm in the open and turns a cold blue as it slips behind the terrain as seen from the pin (or from you, in the standing view), with the time reading **behind terrain** once it's gone.
 - **Drag the sun** along its path to change the time. Hold **Shift** while dragging to move it anywhere in the sky: Zenit finds the date and time when the sun is there. A plain drag never changes the date, however far you pull it.
 - The ring badges show when the sun centre crosses a flat horizon (like Shadowmap's badges), so they are a few minutes inside the sunrise/sunset times in the sun card.
 - The time is part of the page link (`&t=…` in UTC), so a shared link opens at the same moment.
@@ -168,7 +168,7 @@ The map fills the screen. The sun summary sits under the search bar (tap the arr
 
 The readout in the bottom-left (in the layer panel on windows narrower than 1400 px) shows the view centre (lat, lng), the camera's height above the ground under it, bearing and pitch. Click any value, type a new one and press Enter (heights accept `850`, `850 m` or `1.2 km`).
 
-Search finds places by name, or paste coordinates straight from Google Maps (`46.60068, 11.72598`).
+Search finds places by name (OpenStreetMap's Nominatim, with Photon as a fallback when it finds nothing), or paste coordinates straight from Google Maps (`46.60068, 11.72598`). Results show the nearest places and the country; on a phone they open over the sun card.
 
 The page URL always holds the current view, so you can bookmark or share a view.
 
