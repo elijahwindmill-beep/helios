@@ -1,4 +1,5 @@
 import type { CustomLayerInterface, Map as MlMap } from 'maplibre-gl';
+import { lensStrengthNow } from './lensStrength';
 import { useApp } from '../store/app';
 import { getSunScreen } from './sunScene';
 
@@ -200,10 +201,7 @@ export function installLens(map: MlMap): () => void {
   let size = [0, 0];
   let broken = false;
 
-  const strength = () => {
-    const s = useApp.getState();
-    return s.overlays.lens ? s.lensStrength : 0;
-  };
+  const strength = () => lensStrengthNow();
 
   const compile = (frag: string, uniforms: string[]) => {
     const make = (type: number, text: string) => {

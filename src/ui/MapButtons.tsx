@@ -2,11 +2,15 @@ import { useApp } from '../store/app';
 import { getMap } from '../map/mapInstance';
 import { useTimeline } from '../store/timeline';
 import { StandButton } from './StandView';
+import { ClearViewButton } from './HudTabs';
+import { useNarrow } from './useMedia';
 
 export function MapButtons() {
   const bearing = useApp((s) => s.camera?.bearing ?? 0);
+  const narrow = useNarrow();
   return (
     <div className="map-buttons">
+      {!narrow && <ClearViewButton inStack />}
       <button
         className="icon-button narrow-only"
         aria-label="Layers and settings"

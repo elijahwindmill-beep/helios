@@ -24,13 +24,15 @@ import { useApp } from './store/app';
 import { useTheme } from './ui/useTheme';
 import { StandBar } from './ui/StandView';
 import { useStand } from './store/stand';
+import { PHONE_LENS } from './scene/lensStrength';
 
 export function App() {
   // Desktop: a HUD around the map (top bar, forecast, alerts, dock). Phone: compact cards.
   const narrow = useNarrow();
   const readoutInPanel = useReadoutInPanel();
   const hud = useApp((s) => s.hud);
-  const lens = useApp((s) => (s.overlays.lens ? s.lensStrength : 0));
+  const lens = useApp((s) => (s.overlays.lens ? s.lensStrength : 0)) * (narrow ? PHONE_LENS : 1);
+  const layersOpen = useApp((s) => s.layersOpen);
   const timeline = useTimeline((s) => s.open);
   const inspecting = useTimeline((s) => s.open && s.selected !== null);
   const standing = useStand((s) => s.active);
@@ -46,6 +48,7 @@ export function App() {
       data-timeline={timeline || undefined}
       data-inspector={inspecting || undefined}
       data-standing={standing || undefined}
+      data-layers-open={(narrow && layersOpen) || undefined}
       style={{ '--lens': lens } as React.CSSProperties}
     >
       <MapView />
@@ -70,7 +73,14 @@ export function App() {
       <Timeline />
       <Inspector />
       <LensOverlay />
-      {narrow ? <ClearViewButton /> : <HudTabs />}
+      {narrow ? (
+        <ClearViewButton />
+      ) : (
+        <>
+          <HudTabs />
+          <ClearViewButton restoreOnly />
+        </>
+      )}
       <DrawBar />
       <StandBar />
       <LayerNotice />

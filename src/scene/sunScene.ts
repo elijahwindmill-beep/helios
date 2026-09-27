@@ -7,6 +7,7 @@ import { solveDateTime, solveTimeOnDay, skyVector, type SkyDirection } from '../
 import { EARTH_RADIUS, EYE_HEIGHT_M } from '../map/cameraMath';
 import { cameraEye } from '../map/camera';
 import { isStanding } from '../store/stand';
+import { lensStrengthNow } from './lensStrength';
 import { invert, multiply, pixelRay, raySphere, toScreen, transform, type Mat4, type Vec3 } from './projection';
 
 // The Shadowmap-style sun scene around the pin: compass ring on the ground, today's sun
@@ -17,7 +18,8 @@ import { invert, multiply, pixelRay, raySphere, toScreen, transform, type Mat4, 
 // The sky is a dome centred on the pin; a sun direction (azimuth, elevation) sits on it at
 // the dome radius. The radius follows the zoom so the ring keeps a steady size on screen,
 // unless it's locked to a size in metres: then it behaves like an object in the landscape
-// (for camera moves), and the sun and labels scale with it.
+// (for camera moves): the sun keeps its size in the landscape, seen in perspective, and the
+// labels scale along a little.
 
 // Thin, light lines like Apple Weather's sun chart, with dark glass labels (the Frost HUD).
 const AMBER = '#F5A623';
@@ -228,6 +230,25 @@ export function installSunScene(map: MlMap): () => void {
       return c.w > wMin ? toScreen(c, W, H) : null;
     };
 
+    /**
+     * Screen pixels per metre at a point of the local frame: the sum of the squared screen
+     * lengths of three unit axes there is twice the square of the scale.
+     */
+    const pxPerMetre = (p: Vec3): number | null => {
+      const q0 = toScreen(transform(m, p), W, H);
+      if (!q0) return null;
+      const e = Math.max(0.01, R * 0.001);
+      let sum = 0;
+      for (const axis of [0, 1, 2]) {
+        const v: Vec3 = [p[0], p[1], p[2]];
+        v[axis] += e;
+        const q1 = toScreen(transform(m, v), W, H);
+        if (!q1) return null;
+        sum += ((q1[0] - q0[0]) ** 2 + (q1[1] - q0[1]) ** 2) / (e * e);
+      }
+      return Math.sqrt(sum / 2);
+    };
+
     // Polyline through dome points, skipping pieces behind the camera.
     const polyline = (pts: Vec3[], closed = false) => {
       ctx.beginPath();
@@ -392,6 +413,12 @@ export function installSunScene(map: MlMap): () => void {
         const hidden = below > 0;
         const cover = Math.min(1, Math.max(0, below / SUN_DIAMETER_DEG + 0.5));
         if (q) {
+          // Locked scene: the sun is an object of fixed size in the landscape too (its normal
+          // on-screen size at the moment of locking), seen in perspective where it stands.
+          if (s.sunSceneSize && !eyeLevel) {
+            const perM = pxPerMetre([dir[0] * R, dir[1] * R, dir[2] * R]);
+            if (perM) scale = Math.min(12, Math.max(0.1, (R * perM) / ringPx));
+          }
           const discR = 8.5 * scale;
           // Always see-through: a glowing crown and a solid glowing rim around an empty disc. Warm
           // in the open, cooling to a cold blue as it slips behind the terrain from the pin (or
@@ -440,7 +467,7 @@ export function installSunScene(map: MlMap): () => void {
 
     // Tilt-shift like the map's (scene/lens.ts): blurred toward the top and bottom, sharp in
     // the middle band, so the scene sits at the same focal depth as the terrain under it.
-    const k = s.overlays.lens ? s.lensStrength : 0;
+    const k = lensStrengthNow();
     if (k > 0) tiltShift(k, dpr);
   };
 

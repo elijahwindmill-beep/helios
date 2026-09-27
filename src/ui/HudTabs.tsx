@@ -43,13 +43,19 @@ export function HudTabs() {
   );
 }
 
-/** Phone: one button hides everything but the map; a small one brings it back. */
-export function ClearViewButton() {
+/**
+ * One button hides everything but the map; the same button, alone in the corner, brings it all
+ * back. On a phone it floats with the map buttons. On a computer it tops the map-button stack
+ * (`inStack`) and the corner one only shows while everything is hidden (`restoreOnly`).
+ */
+export function ClearViewButton({ inStack = false, restoreOnly = false }: { inStack?: boolean; restoreOnly?: boolean }) {
   const hidden = useApp((s) => !Object.values(s.hud).some(Boolean));
+  if ((inStack && hidden) || (restoreOnly && !hidden)) return null;
   return (
     <button
-      className={hidden ? 'icon-button clear-view clear-view-restore' : 'icon-button clear-view'}
+      className={inStack ? 'icon-button' : hidden ? 'icon-button clear-view clear-view-restore' : 'icon-button clear-view'}
       aria-label={hidden ? 'Show the controls' : 'Hide the controls for a clear map'}
+      title={hidden ? 'Show the controls (H)' : 'Hide the controls for a clear map (H)'}
       onClick={() => useApp.getState().toggleHud()}
     >
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

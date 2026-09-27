@@ -3237,3 +3237,16 @@ html[data-exporting] .maplibregl-ctrl-bottom-right {
     text-align: center;
   }
 }
+
+/* ---------- Phone: lighter lens, and a clear layer sheet ---------- */
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) {
+  /* A narrow feathered edge instead of 80 px of a 390 px screen. */
+  .lens-edge {
+    -webkit-mask-image: radial-gradient(ellipse closest-side at center, transparent calc(100% - 28px), black 100%);
+    mask-image: radial-gradient(ellipse closest-side at center, transparent calc(100% - 28px), black 100%);
+  }
+}
+/* The clear-view button would sit on the sheet's switches. */
+.app[data-layers-open] .clear-view {
+  display: none;
+}
