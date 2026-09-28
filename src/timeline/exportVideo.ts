@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getSunCore, setFlareClock } from '../scene/sunScene';
+import { getSceneProbe, getSunCore, sceneExport, setFlareClock } from '../scene/sunScene';
 import { BufferTarget, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH, canEncodeVideo } from 'mediabunny';
 import type { Map as MlMap } from 'maplibre-gl';
 import { useApp } from '../store/app';
@@ -9,6 +9,7 @@ import { shadowsBusy } from '../map/shadowLayer';
 import { clipDuration } from './model';
 import { applyFrame, ensureLift, fillPivotHeights, frameAt, seek } from './runtime';
 import { ProResWriter } from './prores';
+import { createAverage, type Average } from './accumulate';
 
 /**
  * Video export, one frame at a time: for every frame the clip is set to that exact moment,
@@ -96,61 +97,6 @@ const nextRender = (map: MlMap) =>
     map.triggerRepaint();
   });
 
-/** The sun scene alone, over transparency. */
-function composeSun(out: CanvasRenderingContext2D, map: MlMap) {
-  const W = out.canvas.width;
-  const H = out.canvas.height;
-  out.clearRect(0, 0, W, H);
-  const scene = map.getContainer().querySelector<HTMLCanvasElement>('canvas.sun-scene');
-  if (scene) out.drawImage(scene, 0, 0, W, H);
-}
-
-/**
- * Motion blur: the frame's moments averaged, in premultiplied alpha so transparent edges
- * blend right.
- */
-class Accumulator {
-  private sum: Float32Array;
-  private n = 0;
-  constructor(private ctx: CanvasRenderingContext2D) {
-    this.sum = new Float32Array(ctx.canvas.width * ctx.canvas.height * 4);
-  }
-  reset() {
-    this.sum.fill(0);
-    this.n = 0;
-  }
-  add() {
-    const d = this.ctx.getImageData(0, 0, this.ctx.canvas.width, this.ctx.canvas.height).data;
-    const s = this.sum;
-    for (let i = 0; i < d.length; i += 4) {
-      const a = d[i + 3] / 255;
-      s[i] += d[i] * a;
-      s[i + 1] += d[i + 1] * a;
-      s[i + 2] += d[i + 2] * a;
-      s[i + 3] += a;
-    }
-    this.n++;
-  }
-  /** Writes the average back to the canvas. */
-  write() {
-    const { width, height } = this.ctx.canvas;
-    const img = this.ctx.createImageData(width, height);
-    const d = img.data;
-    const s = this.sum;
-    const n = this.n;
-    for (let i = 0; i < d.length; i += 4) {
-      const a = s[i + 3] / n;
-      if (a <= 0) continue;
-      const k = 1 / (a * n);
-      d[i] = s[i] * k;
-      d[i + 1] = s[i + 1] * k;
-      d[i + 2] = s[i + 2] * k;
-      d[i + 3] = a * 255;
-    }
-    this.ctx.putImageData(img, 0, 0);
-  }
-}
-
 /** A tile of grey noise for the film grain. */
 function noiseTile(size: number): HTMLCanvasElement {
   const c = document.createElement('canvas');
@@ -172,7 +118,7 @@ function noiseTile(size: number): HTMLCanvasElement {
  * The frame as seen on screen: the map (with the in-map lens), the sun scene on top, then the
  * screen-wide lens effects the app draws over everything: vignette, edge blur and grain.
  */
-function compose(out: CanvasRenderingContext2D, map: MlMap, frameIndex: number, cssScale: number, noise: HTMLCanvasElement, tmp: HTMLCanvasElement) {
+function composeBase(out: CanvasRenderingContext2D, map: MlMap, cssScale: number) {
   const W = out.canvas.width;
   const H = out.canvas.height;
   out.globalCompositeOperation = 'source-over';
@@ -190,9 +136,12 @@ function compose(out: CanvasRenderingContext2D, map: MlMap, frameIndex: number, 
     out.drawImage(map.getCanvas(), 0, 0, W, H);
     out.restore();
   }
-  const scene = map.getContainer().querySelector<HTMLCanvasElement>('canvas.sun-scene');
-  if (scene) out.drawImage(scene, 0, 0, W, H);
+}
 
+/** The screen-wide lens effects the app draws over everything: edge blur, vignette and grain. */
+function composeLens(out: CanvasRenderingContext2D, frameIndex: number, cssScale: number, noise: HTMLCanvasElement, tmp: HTMLCanvasElement) {
+  const W = out.canvas.width;
+  const H = out.canvas.height;
   const app = useApp.getState();
   const k = app.overlays.lens ? app.lensStrength : 0;
   if (k <= 0) return;
@@ -296,8 +245,12 @@ export async function runExport() {
   const out = document.createElement('canvas');
   out.width = width;
   out.height = height;
-  const ctx = out.getContext('2d', { alpha: sunOnly, willReadFrequently: motionBlur })!;
-  const blur = motionBlur ? new Accumulator(ctx) : null;
+  const ctx = out.getContext('2d', { alpha: sunOnly })!;
+  const mapBlur = motionBlur && !sunOnly ? createAverage(width, height) : null;
+  let sunBlur: Average | null = null;
+  let sunBlurSize = '';
+  let labelsCanvas: HTMLCanvasElement | null = null;
+  const sceneCanvas = () => map.getContainer().querySelector<HTMLCanvasElement>('canvas.sun-scene');
   const tmp = document.createElement('canvas');
   tmp.width = width;
   tmp.height = height;
@@ -308,35 +261,95 @@ export async function runExport() {
   const source = sunOnly ? null : new CanvasSource(out, { codec: 'avc', bitrate: QUALITY_HIGH, keyFrameInterval: 2 });
   if (output && source) output.addVideoTrack(source, { frameRate: fps });
 
-  /** Puts the clip at moment t and draws it into the frame canvas. */
-  const drawMoment = async (t: number, i: number) => {
+  const scale = width / cssW;
+  /** Puts the clip at moment t (camera, sun, flares), without waiting for anything to draw. */
+  const place = (t: number) => {
     const f = frameAt(t);
     setFlareClock(t);
     if (f) applyFrame(f);
-    map.triggerRepaint();
-    if (sunOnly) {
-      await nextRender(map);
-      composeSun(ctx, map);
-    } else {
-      await settle(map);
-      compose(ctx, map, i, width / cssW, noise, tmp);
-    }
   };
-  const open = (Math.min(360, Math.max(1, shutter)) / 360) / fps;
-  const n = Math.round(Math.min(30, Math.max(2, samples)));
+  const open = motionBlur ? Math.min(360, Math.max(1, shutter)) / 360 / fps : 0;
+  const nMap = Math.round(Math.min(30, Math.max(2, samples)));
+  /**
+   * The sun layer's moments: at least the chosen samples, and more where the sun, the ring or
+   * the camera move far in one frame, so the copies merge into one streak (about a pixel apart).
+   */
+  const sunMoments = (t0: number) => {
+    const probes = [0, 0.25, 0.5, 0.75, 1].map((u) => {
+      place(t0 + u * open);
+      sceneExport.redraw?.();
+      return getSceneProbe().map((p) => [...p] as [number, number]);
+    });
+    let far = 0;
+    const count = Math.min(...probes.map((p) => p.length));
+    for (let j = 0; j < count; j++) {
+      let len = 0;
+      for (let u = 1; u < probes.length; u++) len += Math.hypot(probes[u][j][0] - probes[u - 1][j][0], probes[u][j][1] - probes[u - 1][j][1]);
+      far = Math.max(far, len);
+    }
+    return Math.round(Math.min(600, Math.max(nMap, Math.ceil(far * scale))));
+  };
+  /** The sun scene for frame time t0: one moment, or many blended (motion blur). */
+  const sunLayer = (t0: number): CanvasImageSource | null => {
+    if (!motionBlur || !sceneExport.redraw || !sceneExport.finish) return sceneCanvas();
+    const n = sunMoments(t0);
+    const first = sceneExport.redraw();
+    if (!sunBlur || sunBlurSize !== `${first.width}x${first.height}`) {
+      sunBlur = createAverage(first.width, first.height);
+      sunBlurSize = `${first.width}x${first.height}`;
+    }
+    sunBlur.reset();
+    for (let k = 0; k < n; k++) {
+      place(t0 + (k / n) * open);
+      sunBlur.add(sceneExport.redraw('shapes'));
+    }
+    // Labels (times, angles) sharp at the frame's own moment: blurred, their changing text is unreadable.
+    const blurred = sunBlur.result();
+    place(t0);
+    if (!labelsCanvas || labelsCanvas.width !== first.width || labelsCanvas.height !== first.height) {
+      labelsCanvas = document.createElement('canvas');
+      labelsCanvas.width = first.width;
+      labelsCanvas.height = first.height;
+    }
+    const lc = labelsCanvas.getContext('2d')!;
+    lc.clearRect(0, 0, labelsCanvas.width, labelsCanvas.height);
+    lc.drawImage(sceneExport.redraw('labels'), 0, 0);
+    return sceneExport.finish(blurred, labelsCanvas);
+  };
 
   try {
     await output?.start();
     for (let i = 0; i < total; i++) {
       if (cancelled) break;
-      if (blur) {
-        blur.reset();
-        for (let k = 0; k < n && !cancelled; k++) {
-          await drawMoment(i / fps + (k / n) * open, i);
-          blur.add();
+      const t0 = i / fps;
+      const W = out.width;
+      const H = out.height;
+      if (sunOnly) {
+        ctx.clearRect(0, 0, W, H);
+        place(t0);
+        map.triggerRepaint();
+        await nextRender(map);
+      } else if (mapBlur) {
+        // The map's moments, each waiting for tiles and shadows.
+        mapBlur.reset();
+        for (let k = 0; k < nMap && !cancelled; k++) {
+          place(t0 + (k / nMap) * open);
+          map.triggerRepaint();
+          await settle(map);
+          composeBase(ctx, map, scale);
+          mapBlur.add(out);
         }
-        blur.write();
-      } else await drawMoment(i / fps, i);
+        ctx.clearRect(0, 0, W, H);
+        ctx.drawImage(mapBlur.result(), 0, 0, W, H);
+      } else {
+        place(t0);
+        map.triggerRepaint();
+        await settle(map);
+        composeBase(ctx, map, scale);
+      }
+      const scene = sunLayer(t0);
+      if (scene) ctx.drawImage(scene, 0, 0, W, H);
+      if (!sunOnly) composeLens(ctx, i, scale, noise, tmp);
       // Development only: lets a test look at each finished frame.
       if (import.meta.env.DEV) (window as unknown as { __exportProbe?: (c: HTMLCanvasElement, i: number) => void }).__exportProbe?.(out, i);
       if (prores) await prores.add(out);

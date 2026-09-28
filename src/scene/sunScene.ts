@@ -127,6 +127,21 @@ function pathRuns(dayStart: number, dayEnd: number, lat: number, lng: number): P
 // Where the sun was last drawn on screen (CSS px in the map), for the lens dirt glow.
 let lastSunScreen: [number, number] | null = null;
 export const getSunScreen = () => lastSunScreen;
+/** Screen points of the last drawn scene (the sun, and the ring's north and east), for export to see how far things move. */
+let lastProbe: Array<[number, number]> = [];
+export const getSceneProbe = () => lastProbe;
+
+/**
+ * Export hooks (installSunScene fills them): redraw the scene right now for the camera as it
+ * stands (no map render needed), without the lens tilt-shift; and put a finished (blended)
+ * scene image back with the tilt-shift applied once. The tilt-shift is a blur, so blurring the
+ * blend is the same as blending the blurs.
+ */
+export const sceneExport: {
+  redraw: ((only?: 'shapes' | 'labels') => HTMLCanvasElement) | null;
+  finish: ((...images: CanvasImageSource[]) => HTMLCanvasElement) | null;
+} = { redraw: null, finish: null };
+
 // The sun's jagged rim as last drawn (CSS px in the map), for its black-and-white negative core.
 let lastCore: Array<[number, number]> | null = null;
 export const getSunCore = () => lastCore;
@@ -339,6 +354,7 @@ export function installSunScene(map: MlMap): () => void {
         pen = true;
       }
     };
+    lastProbe = [S([0, 1, 0]), S([1, 0, 0])].filter((q): q is [number, number] => q !== null);
     const circle = (r: number, n = 120): Vec3[] =>
       Array.from({ length: n }, (_, i) => {
         const a = (i / n) * 2 * Math.PI;
@@ -562,6 +578,7 @@ export function installSunScene(map: MlMap): () => void {
           ctx.restore();
           // No lens glare from a sun that's mostly behind the terrain; it can always be dragged.
           sunScreen = q;
+          lastProbe.push(q);
           if (cover < 0.5) glareAt = q;
           if (hidden) {
             const note = `${formatClock(s.time, tz)} · behind terrain`;
@@ -578,14 +595,18 @@ export function installSunScene(map: MlMap): () => void {
 
     placeCore(lastCore);
     labels.sort((a, b) => b.priority - a.priority);
-    for (const l of labels) l.draw();
+    // Export motion blur: shapes and labels come in separate passes (labels stay sharp).
+    if (pass === 'labels') ctx.clearRect(0, 0, W, H);
+    if (pass !== 'shapes') for (const l of labels) l.draw();
     lastSunScreen = glareAt;
 
     // Tilt-shift like the map's (scene/lens.ts): blurred toward the top and bottom, sharp in
     // the middle band, so the scene sits at the same focal depth as the terrain under it.
     const k = lensStrengthNow();
-    if (k > 0) tiltShift(k, dpr);
+    if (k > 0 && !noTilt) tiltShift(k, dpr);
   };
+  let noTilt = false;
+  let pass: 'all' | 'shapes' | 'labels' = 'all';
 
   /** sharp × (1 − m) + blurred × m, with m the lens's tilt mask (smoothstep bands). */
   const tiltShift = (k: number, dpr: number) => {
@@ -682,6 +703,30 @@ export function installSunScene(map: MlMap): () => void {
     },
   };
   map.addLayer(layer);
+
+  sceneExport.redraw = (only) => {
+    // MapLibre's camera as it stands after jumpTo, the same matrix a render would hand the layer.
+    const tr = (map as unknown as { _camera?: { transform?: { modelViewProjectionMatrix?: Mat4 } }; transform?: { modelViewProjectionMatrix?: Mat4 } });
+    const m = tr._camera?.transform?.modelViewProjectionMatrix ?? tr.transform?.modelViewProjectionMatrix;
+    if (m) matrix = m;
+    noTilt = true;
+    pass = only ?? 'all';
+    try {
+      draw();
+    } finally {
+      noTilt = false;
+      pass = 'all';
+    }
+    return canvas;
+  };
+  sceneExport.finish = (...images) => {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const image of images) ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const k = lensStrengthNow();
+    if (k > 0) tiltShift(k, map.getPixelRatio());
+    return canvas;
+  };
 
   // The flares keep moving: redraw the scene on its own while the sun is on screen.
   let flareFrame = 0;
@@ -830,6 +875,7 @@ export function installSunScene(map: MlMap): () => void {
     unsubscribe();
     cancelAnimationFrame(frame);
     cancelAnimationFrame(flareFrame);
+    sceneExport.redraw = sceneExport.finish = null;
     map.off('resize', resize);
     if (map.getLayer('sun-scene')) map.removeLayer('sun-scene');
     canvas.remove();
