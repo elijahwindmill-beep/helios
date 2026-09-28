@@ -94,6 +94,8 @@ interface PathPoint {
 interface DayPaths {
   key: string;
   today: PathPoint[][];
+  /** The rest of the loop, below the horizon (shown in cold while the sun is down). */
+  night: PathPoint[][];
   rise: PathPoint | null;
   set: PathPoint | null;
   refs: Array<{ label: string; style: 'dash' | 'dot'; dayStart: number; dayEnd: number; runs: PathPoint[][]; apex: PathPoint | null }>;
@@ -104,23 +106,27 @@ function dirOf(t: number, lat: number, lng: number): Vec3 {
   return skyVector(s.azimuth, s.elevationTrue);
 }
 
-/** The sun's path over a local day, split into runs above the horizon. */
-function pathRuns(dayStart: number, dayEnd: number, lat: number, lng: number): PathPoint[][] {
+/** The sun's path over a local day, split into runs above the horizon (or, `below`, under it). */
+function pathRuns(dayStart: number, dayEnd: number, lat: number, lng: number, below = false): PathPoint[][] {
   const runs: PathPoint[][] = [];
   let run: PathPoint[] = [];
   const step = 4 * 60000;
   for (let t = dayStart; t <= dayEnd; t += step) {
     const dir = dirOf(t, lat, lng);
-    if (dir[2] >= 0) run.push({ t, dir });
+    if (dir[2] >= 0 !== below) run.push({ t, dir });
     else if (run.length) {
       runs.push(run);
       run = [];
     }
   }
   if (run.length) runs.push(run);
+  // The night runs either side of midnight are one arc.
+  if (below && runs.length > 1 && runs[0][0].t === dayStart && run.length && run[run.length - 1].t + step > dayEnd) {
+    runs[0] = [...runs.pop()!, ...runs[0]];
+  }
   // Pin the ends exactly onto the horizon so the path meets the ring.
   return runs.map((r) =>
-    r.map((p, i) => (i === 0 || i === r.length - 1) && p.dir[2] < 0.02 ? { t: p.t, dir: [p.dir[0], p.dir[1], 0] as Vec3 } : p),
+    r.map((p, i) => (i === 0 || i === r.length - 1) && Math.abs(p.dir[2]) < 0.02 ? { t: p.t, dir: [p.dir[0], p.dir[1], 0] as Vec3 } : p),
   );
 }
 
@@ -227,6 +233,7 @@ export function installSunScene(map: MlMap): () => void {
     paths = {
       key,
       today: pathRuns(day.dayStart, day.dayEnd, lat, lng),
+      night: pathRuns(day.dayStart, day.dayEnd, lat, lng, true),
       rise: day.sunrise !== null ? { t: day.sunrise, dir: flat(dirOf(day.sunrise, lat, lng)) } : null,
       set: day.sunset !== null ? { t: day.sunset, dir: flat(dirOf(day.sunset, lat, lng)) } : null,
       refs: refDays.map((r) => {
@@ -435,6 +442,23 @@ export function installSunScene(map: MlMap): () => void {
         ctx.strokeStyle = grad;
         ctx.lineWidth = 0.6;
         ctx.stroke();
+      }
+      // With the sun down, the rest of its loop under the horizon, cold like the sun on it.
+      if (sunPosition(s.time, pin.lat, pin.lng).elevationTrue < 0) {
+        for (const run of dp.night) {
+          if (run.length < 2) continue;
+          polyline(run.map((p) => p.dir));
+          ctx.save();
+          ctx.strokeStyle = 'rgba(110,160,230,0.19)';
+          ctx.lineWidth = 3.7;
+          ctx.filter = 'blur(2.1px)';
+          ctx.stroke();
+          ctx.restore();
+          polyline(run.map((p) => p.dir));
+          ctx.strokeStyle = 'rgba(175,205,250,0.85)';
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+        }
       }
       for (const b of [dp.rise, dp.set]) {
         if (!b) continue;
