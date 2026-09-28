@@ -38,5 +38,8 @@ export default defineConfig(({ command }) => ({
     packageFiles('maplibre', 'maplibre-gl', 'dist', ['maplibre-gl-worker.mjs', 'maplibre-gl-shared.mjs']),
   ],
   server: { port: 5173 },
+  // ffmpeg.wasm (ProRes export) starts its own module worker from its package files.
+  optimizeDeps: { exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'] },
+  worker: { format: 'es' },
   test: { include: ['tests/unit/**/*.test.ts'] },
 }));

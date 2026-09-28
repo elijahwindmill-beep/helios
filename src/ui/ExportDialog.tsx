@@ -26,6 +26,8 @@ export function ExportDialog() {
 
   const duration = clipDuration(clip);
   const frames = Math.round(duration * ex.options.fps) + 1;
+  const o = ex.options;
+  const sunOnly = o.contents === 'sun';
 
   return (
     <>
@@ -34,9 +36,24 @@ export function ExportDialog() {
           <>
             <h2 className="title">Export “{clip.name}”</h2>
             <p className="muted">
-              {timecode(duration)} · {frames} frames · MP4 (H.264). Every frame waits for the map and shadows to finish drawing, so it takes longer than the clip, but the video
-              is smooth.
+              {timecode(duration)} · {frames} frames · {sunOnly ? 'ProRes 4444 with alpha (.mov)' : 'MP4 (H.264)'}.{' '}
+              {sunOnly ? 'Frames are drawn one at a time, so the video is smooth however long it takes.' : 'Every frame waits for the map and shadows to finish drawing, so it takes longer than the clip, but the video is smooth.'}
             </p>
+            <span className="hud-label">Contents</span>
+            <div className="segmented" role="group" aria-label="Contents">
+              <button aria-pressed={!sunOnly} onClick={() => ex.setOptions({ contents: 'full' })} title="The map, shadows, sun scene and lens look, as on screen">
+                Map and sun
+              </button>
+              <button aria-pressed={sunOnly} onClick={() => ex.setOptions({ contents: 'sun' })} title="The sun, its paths, the compass ring and labels over transparency">
+                Sun path only
+              </button>
+            </div>
+            {sunOnly && (
+              <p className="muted export-note">
+                The sun scene alone over a transparent background, as ProRes 4444 with alpha, ready to lay over your footage in Resolve. The encoder (about 32 MB) loads from
+                jsDelivr the first time.
+              </p>
+            )}
             <span className="hud-label">Size</span>
             <div className="segmented" role="group" aria-label="Size">
               {SIZES.map((s) => (
@@ -53,10 +70,36 @@ export function ExportDialog() {
                 </button>
               ))}
             </div>
-            <p className="muted export-note">
-              The map, shadows, sun scene and lens look are in the video; pins and photo markers aren't. Google 3D tiles are left out too: Google allows them only in short
-              promotional clips.
-            </p>
+            <button className="toggle export-blur" aria-pressed={o.motionBlur} onClick={() => ex.setOptions({ motionBlur: !o.motionBlur })}>
+              <span className="toggle-label">Motion blur</span>
+              <span className="switch" aria-hidden="true">
+                <span className="knob" />
+              </span>
+            </button>
+            {o.motionBlur && (
+              <div className="export-blur-settings">
+                <label className="export-slider">
+                  <span className="hud-label">Shutter angle</span>
+                  <input type="range" className="range" min={10} max={360} step={5} value={o.shutter} onChange={(e) => ex.setOptions({ shutter: Number(e.target.value) })} />
+                  <span className="mono">{o.shutter}°</span>
+                </label>
+                <label className="export-slider">
+                  <span className="hud-label">Samples</span>
+                  <input type="range" className="range" min={2} max={30} step={1} value={o.samples} onChange={(e) => ex.setOptions({ samples: Number(e.target.value) })} />
+                  <span className="mono">{o.samples}</span>
+                </label>
+                <p className="muted export-note">
+                  Each frame blends {o.samples} moments across {Math.round((o.shutter / 360) * (1000 / o.fps))} ms (180° is the film look), so the export takes about{' '}
+                  {o.samples}× as long.
+                </p>
+              </div>
+            )}
+            {!sunOnly && (
+              <p className="muted export-note">
+                The map, shadows, sun scene and lens look are in the video; pins and photo markers aren't. Google 3D tiles are left out too: Google allows them only in short
+                promotional clips.
+              </p>
+            )}
             <div className="export-actions">
               <button className="chip" onClick={ex.close}>
                 Cancel
@@ -103,9 +146,7 @@ export function ExportDialog() {
           <div className="export-bar">
             <span style={{ width: `${(ex.frame / Math.max(1, ex.total)) * 100}%` }} />
           </div>
-          <span className="mono">
-            Frame {ex.frame} / {ex.total}
-          </span>
+          <span className="mono">{ex.message || `Frame ${ex.frame} / ${ex.total}`}</span>
           <button className="chip chip-small" onClick={cancelExport}>
             Cancel
           </button>

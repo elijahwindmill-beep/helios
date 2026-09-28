@@ -10,6 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@photostructure/tz-lookup": "11.7.0",
     "@tmcw/togeojson": "7.1.2",
     "3d-tiles-renderer": "0.5.3",

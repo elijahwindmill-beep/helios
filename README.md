@@ -146,6 +146,8 @@ In the layer panel under **Your layers** (on a phone: the Layers button), or fro
 - **Clear keys** removes every keyframe in the clip; **Undo clear** (or Cmd/Ctrl+Z) brings them back for 15 seconds.
 - Several clips per project; **Split clip** cuts at the playhead. Everything autosaves in the browser; **Save project** / **Open…** use a .json file.
 - **Export video**: MP4 (H.264), 720p / 1080p / 4K, 24 / 30 / 60 fps. Frames are rendered one at a time, each waiting for the map and shadows, so the video is smooth on any computer (it takes longer than the clip). Uses the browser's WebCodecs encoder with Mediabunny (MPL-2.0) instead of the brief's WebM MediaRecorder, because it gives exact frame timing and a file Resolve opens directly. Pins and photo markers aren't in the video.
+  - **Contents: Sun path only** leaves the map out: the sun, its flares, the paths, compass ring and labels over a transparent background, saved as **ProRes 4444 with alpha** (.mov, Rec. 709, the `ap4h` flavour Resolve, Premiere and Final Cut read), to lay over your own footage. Browsers can't encode ProRes, so this uses ffmpeg.wasm; its 32 MB core loads from jsDelivr the first time you use it (the browser keeps it after that).
+  - **Motion blur** (switch in the export dialog): each frame blends several moments across the time a film camera's shutter would be open. **Shutter angle** 10–360° (180° is the classic film look; 360° blurs across the whole frame) and **Samples** 2–30 (more is smoother and slower: the export takes about that many times as long). Works for both kinds of export. It's for exports only: the live preview can't redraw the map that many times per frame.
 
 ### Photo spots
 
@@ -234,7 +236,7 @@ Terrain detail depends on the region. With the default detailed elevation (Mapte
 
 Fonts: Barlow and Barlow Condensed (SIL Open Font License), loaded from Google Fonts. The logo lettering is drawn in SVG, not a font.
 
-Libraries: MapLibre GL JS (BSD-3), maplibre-contour (BSD-3), React (MIT), Zustand (MIT), @photostructure/tz-lookup (CC0, timezone from coordinates), @tmcw/togeojson (BSD-2, GPX and KML import), exifr (MIT, photo GPS and capture time), Mediabunny (MPL-2.0, MP4 export), three.js (MIT) and 3d-tiles-renderer (Apache-2.0) for the optional Google 3D tiles (loaded only when switched on). Tests only: Vitest (MIT), happy-dom (MIT).
+Libraries: MapLibre GL JS (BSD-3), maplibre-contour (BSD-3), React (MIT), Zustand (MIT), @photostructure/tz-lookup (CC0, timezone from coordinates), @tmcw/togeojson (BSD-2, GPX and KML import), exifr (MIT, photo GPS and capture time), Mediabunny (MPL-2.0, MP4 export), ffmpeg.wasm (@ffmpeg/ffmpeg and @ffmpeg/util, MIT; its FFmpeg core is GPL-2.0-or-later and is loaded from jsDelivr only for ProRes export, not shipped with Zenit), three.js (MIT) and 3d-tiles-renderer (Apache-2.0) for the optional Google 3D tiles (loaded only when switched on). Tests only: Vitest (MIT), happy-dom (MIT).
 
 ## Project layout
 

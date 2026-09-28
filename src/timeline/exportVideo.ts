@@ -8,17 +8,29 @@ import { getMap } from '../map/mapInstance';
 import { shadowsBusy } from '../map/shadowLayer';
 import { clipDuration } from './model';
 import { applyFrame, ensureLift, fillPivotHeights, frameAt, seek } from './runtime';
+import { ProResWriter } from './prores';
 
 /**
  * Video export, one frame at a time: for every frame the clip is set to that exact moment,
  * the map waits until tiles and shadows have caught up, and the frame is encoded with its own
  * timestamp. So the video is smooth however slow the computer is. Output: MP4 (H.264) via
- * the browser's video encoder (WebCodecs) and Mediabunny.
+ * the browser's video encoder (WebCodecs) and Mediabunny; or the sun scene alone over
+ * transparency as ProRes 4444 with alpha (timeline/prores.ts).
+ *
+ * Motion blur: each frame is the average of several moments spread over the time the shutter
+ * is open (shutter angle / 360 of a frame, from the frame's own time), like a film camera.
  */
 
 export interface ExportOptions {
   height: 720 | 1080 | 2160;
   fps: 24 | 30 | 60;
+  /** The whole view, or the sun scene alone (sun, paths, ring, labels) over transparency. */
+  contents: 'full' | 'sun';
+  motionBlur: boolean;
+  /** Degrees: 180 is the classic film look, 360 a fully open shutter. */
+  shutter: number;
+  /** Moments averaged into each frame, 2–30. */
+  samples: number;
 }
 
 interface ExportState {
@@ -36,7 +48,7 @@ interface ExportState {
 
 export const useExport = create<ExportState>()((set) => ({
   phase: 'idle',
-  options: { height: 1080, fps: 30 },
+  options: { height: 1080, fps: 30, contents: 'full', motionBlur: false, shutter: 180, samples: 8 },
   frame: 0,
   total: 0,
   message: '',
@@ -74,6 +86,68 @@ async function settle(map: MlMap) {
       return;
     }
     await sleep(40);
+  }
+}
+
+/** One more drawn frame (the sun scene alone doesn't wait for tiles or shadows). */
+const nextRender = (map: MlMap) =>
+  new Promise<void>((resolve) => {
+    map.once('render', () => resolve());
+    map.triggerRepaint();
+  });
+
+/** The sun scene alone, over transparency. */
+function composeSun(out: CanvasRenderingContext2D, map: MlMap) {
+  const W = out.canvas.width;
+  const H = out.canvas.height;
+  out.clearRect(0, 0, W, H);
+  const scene = map.getContainer().querySelector<HTMLCanvasElement>('canvas.sun-scene');
+  if (scene) out.drawImage(scene, 0, 0, W, H);
+}
+
+/**
+ * Motion blur: the frame's moments averaged, in premultiplied alpha so transparent edges
+ * blend right.
+ */
+class Accumulator {
+  private sum: Float32Array;
+  private n = 0;
+  constructor(private ctx: CanvasRenderingContext2D) {
+    this.sum = new Float32Array(ctx.canvas.width * ctx.canvas.height * 4);
+  }
+  reset() {
+    this.sum.fill(0);
+    this.n = 0;
+  }
+  add() {
+    const d = this.ctx.getImageData(0, 0, this.ctx.canvas.width, this.ctx.canvas.height).data;
+    const s = this.sum;
+    for (let i = 0; i < d.length; i += 4) {
+      const a = d[i + 3] / 255;
+      s[i] += d[i] * a;
+      s[i + 1] += d[i + 1] * a;
+      s[i + 2] += d[i + 2] * a;
+      s[i + 3] += a;
+    }
+    this.n++;
+  }
+  /** Writes the average back to the canvas. */
+  write() {
+    const { width, height } = this.ctx.canvas;
+    const img = this.ctx.createImageData(width, height);
+    const d = img.data;
+    const s = this.sum;
+    const n = this.n;
+    for (let i = 0; i < d.length; i += 4) {
+      const a = s[i + 3] / n;
+      if (a <= 0) continue;
+      const k = 1 / (a * n);
+      d[i] = s[i] * k;
+      d[i + 1] = s[i + 1] * k;
+      d[i + 2] = s[i + 2] * k;
+      d[i + 3] = a * 255;
+    }
+    this.ctx.putImageData(img, 0, 0);
   }
 }
 
@@ -173,13 +247,16 @@ export async function runExport() {
   const tl = useTimeline.getState();
   const clip = tl.activeClip();
   if (!map || clip.keyframes.length < 2) return;
-  const { height, fps } = ex.options;
+  const { height, fps, contents, motionBlur, shutter, samples } = ex.options;
+  const sunOnly = contents === 'sun';
   const width = Math.round((height * 16) / 9 / 2) * 2;
   const fail = (message: string) => useExport.setState({ phase: 'error', message });
 
-  if (typeof VideoEncoder === 'undefined') return fail("This browser can't encode video. Export works in Chrome, Edge, and Safari 16.4 or newer.");
-  if (!(await canEncodeVideo('avc', { width, height, bitrate: QUALITY_HIGH }))) {
-    return fail(`This browser or graphics card can't encode ${height}p H.264 video. Try a smaller size.`);
+  if (!sunOnly) {
+    if (typeof VideoEncoder === 'undefined') return fail("This browser can't encode video. Export works in Chrome, Edge, and Safari 16.4 or newer.");
+    if (!(await canEncodeVideo('avc', { width, height, bitrate: QUALITY_HIGH }))) {
+      return fail(`This browser or graphics card can't encode ${height}p H.264 video. Try a smaller size.`);
+    }
   }
   const gl = map.getCanvas().getContext('webgl2');
   const maxSize = gl ? Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), ...(gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array)) : 4096;
@@ -189,8 +266,19 @@ export async function runExport() {
   fillPivotHeights();
   const duration = clipDuration(clip);
   const total = Math.round(duration * fps) + 1;
-  const filename = `zenit-${(clip.name || 'clip').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'clip'}-${height}p${fps}.mp4`;
-  useExport.setState({ phase: 'rendering', frame: 0, total, message: '', filename });
+  const base = (clip.name || 'clip').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'clip';
+  const filename = sunOnly ? `zenit-${base}-sun-${height}p${fps}-prores4444.mov` : `zenit-${base}-${height}p${fps}.mp4`;
+  useExport.setState({ phase: 'rendering', frame: 0, total, message: sunOnly ? 'Loading the ProRes encoder (about 32 MB, the first time)' : '', filename });
+
+  let prores: ProResWriter | null = null;
+  if (sunOnly) {
+    try {
+      prores = await ProResWriter.open(fps);
+    } catch (err) {
+      return fail(`The ProRes encoder didn't load (it comes from cdn.jsdelivr.net): ${err instanceof Error ? err.message : String(err)}`);
+    }
+    useExport.setState({ message: '' });
+  }
   if (ex.url) URL.revokeObjectURL(ex.url);
 
   // Size the map to a 16:9 box on screen and draw it at the export resolution.
@@ -208,39 +296,67 @@ export async function runExport() {
   const out = document.createElement('canvas');
   out.width = width;
   out.height = height;
-  const ctx = out.getContext('2d', { alpha: false })!;
+  const ctx = out.getContext('2d', { alpha: sunOnly, willReadFrequently: motionBlur })!;
+  const blur = motionBlur ? new Accumulator(ctx) : null;
   const tmp = document.createElement('canvas');
   tmp.width = width;
   tmp.height = height;
   const noise = noiseTile(256);
 
   const target = new BufferTarget();
-  const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target });
-  const source = new CanvasSource(out, { codec: 'avc', bitrate: QUALITY_HIGH, keyFrameInterval: 2 });
-  output.addVideoTrack(source, { frameRate: fps });
+  const output = sunOnly ? null : new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target });
+  const source = sunOnly ? null : new CanvasSource(out, { codec: 'avc', bitrate: QUALITY_HIGH, keyFrameInterval: 2 });
+  if (output && source) output.addVideoTrack(source, { frameRate: fps });
 
-  try {
-    await output.start();
-    for (let i = 0; i < total; i++) {
-      if (cancelled) break;
-      const f = frameAt(i / fps);
-      setFlareClock(i / fps);
-      if (f) applyFrame(f);
-      map.triggerRepaint();
+  /** Puts the clip at moment t and draws it into the frame canvas. */
+  const drawMoment = async (t: number, i: number) => {
+    const f = frameAt(t);
+    setFlareClock(t);
+    if (f) applyFrame(f);
+    map.triggerRepaint();
+    if (sunOnly) {
+      await nextRender(map);
+      composeSun(ctx, map);
+    } else {
       await settle(map);
       compose(ctx, map, i, width / cssW, noise, tmp);
+    }
+  };
+  const open = (Math.min(360, Math.max(1, shutter)) / 360) / fps;
+  const n = Math.round(Math.min(30, Math.max(2, samples)));
+
+  try {
+    await output?.start();
+    for (let i = 0; i < total; i++) {
+      if (cancelled) break;
+      if (blur) {
+        blur.reset();
+        for (let k = 0; k < n && !cancelled; k++) {
+          await drawMoment(i / fps + (k / n) * open, i);
+          blur.add();
+        }
+        blur.write();
+      } else await drawMoment(i / fps, i);
       // Development only: lets a test look at each finished frame.
       if (import.meta.env.DEV) (window as unknown as { __exportProbe?: (c: HTMLCanvasElement, i: number) => void }).__exportProbe?.(out, i);
-      await source.add(i / fps, 1 / fps);
+      if (prores) await prores.add(out);
+      else await source!.add(i / fps, 1 / fps);
       useExport.setState({ frame: i + 1 });
     }
     if (cancelled) {
-      await output.cancel();
+      await output?.cancel();
+      prores?.cancel();
       useExport.setState({ phase: 'idle' });
       return;
     }
-    await output.finalize();
-    const blob = new Blob([target.buffer!], { type: 'video/mp4' });
+    let blob: Blob;
+    if (prores) {
+      useExport.setState({ message: 'Writing the file' });
+      blob = await prores.finish();
+    } else {
+      await output!.finalize();
+      blob = new Blob([target.buffer!], { type: 'video/mp4' });
+    }
     const url = URL.createObjectURL(blob);
     useExport.setState({ phase: 'done', url, message: `${(blob.size / 1e6).toFixed(1)} MB` });
     const a = document.createElement('a');
@@ -248,7 +364,8 @@ export async function runExport() {
     a.download = filename;
     a.click();
   } catch (err) {
-    await output.cancel().catch(() => {});
+    await output?.cancel().catch(() => {});
+    prores?.cancel();
     fail(`Export stopped: ${err instanceof Error ? err.message : String(err)}`);
   } finally {
     if (saved.style === null) container.removeAttribute('style');

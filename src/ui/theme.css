@@ -3266,3 +3266,22 @@ html[data-exporting] .maplibregl-ctrl-bottom-right {
   -webkit-backdrop-filter: grayscale(1) invert(1);
   backdrop-filter: grayscale(1) invert(1);
 }
+
+/* ---------- Export: motion blur ---------- */
+.export-blur {
+  width: 100%;
+  margin-top: 12px;
+}
+.export-blur-settings {
+  display: grid;
+  gap: 8px;
+}
+.export-slider {
+  display: grid;
+  grid-template-columns: 110px 1fr 48px;
+  align-items: center;
+  gap: 10px;
+}
+.export-slider .mono {
+  text-align: right;
+}
