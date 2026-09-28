@@ -53,8 +53,10 @@ export class ProResWriter {
       '-start_number', String(first),
       '-i', 'f%06d.png',
       '-frames:v', String(this.pending.length),
-      // sRGB frames to Rec. 709 video levels, tagged so editors read the colours right.
-      '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuva444p10le',
+      // Premultiplied colour, the ProRes 4444 convention editors assume (Resolve's clip alpha
+      // mode "Premultiplied"): read as straight, a faint glow's full-strength colour would show
+      // as a solid blob. Then sRGB to Rec. 709 video levels, tagged so editors read colours right.
+      '-vf', 'premultiply=inplace=1,scale=out_color_matrix=bt709:out_range=tv,format=yuva444p10le',
       '-c:v', 'prores_ks',
       '-profile:v', '4444',
       '-vendor', 'apl0',

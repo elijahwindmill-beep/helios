@@ -355,11 +355,6 @@ export function installSunScene(map: MlMap): () => void {
       }
     };
     lastProbe = [S([0, 1, 0]), S([1, 0, 0])].filter((q): q is [number, number] => q !== null);
-    const circle = (r: number, n = 120): Vec3[] =>
-      Array.from({ length: n }, (_, i) => {
-        const a = (i / n) * 2 * Math.PI;
-        return [Math.sin(a) * r, Math.cos(a) * r, 0];
-      });
 
     const tz = timeZoneAt(pin.lat, pin.lng);
     const dp = getPaths(pin.lat, pin.lng, s.time, tz);
@@ -369,47 +364,28 @@ export function installSunScene(map: MlMap): () => void {
     const label = (priority: number, draw: () => void) => labels.push({ priority, draw });
     placed = [];
 
-    // Compass ring on the ground.
+    // Compass ring on the ground: a ring of dots every 5°, bigger every 30° and at the four
+    // directions, which alone are lettered.
     if (compass) {
-      const outer = circle(1);
-      const inner = circle(0.9);
-      const so = outer.map(S);
-      const si = inner.map(S);
-      if (so.every(Boolean) && si.every(Boolean)) {
-        ctx.beginPath();
-        so.forEach((q, i) => (i ? ctx.lineTo(q![0], q![1]) : ctx.moveTo(q![0], q![1])));
-        ctx.closePath();
-        si.forEach((q, i) => (i ? ctx.lineTo(q![0], q![1]) : ctx.moveTo(q![0], q![1])));
-        ctx.closePath();
-        ctx.fillStyle = 'rgba(255,255,255,0.24)';
-        ctx.fill('evenodd');
-      }
-      ctx.lineWidth = 0.75;
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-      polyline(outer, true);
-      ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-      polyline(inner, true);
-      ctx.stroke();
-      for (let deg = 0; deg < 360; deg += 10) {
+      ctx.save();
+      ctx.shadowColor = LINE_SHADOW;
+      ctx.shadowBlur = 2;
+      for (let deg = 0; deg < 360; deg += 5) {
         const a = (deg * Math.PI) / 180;
-        const major = deg % 30 === 0;
-        const r0 = major ? 0.9 : 0.94;
-        polyline([
-          [Math.sin(a) * r0, Math.cos(a) * r0, 0],
-          [Math.sin(a), Math.cos(a), 0],
-        ]);
-        ctx.strokeStyle = major ? 'rgba(20,24,29,0.6)' : 'rgba(20,24,29,0.32)';
-        ctx.lineWidth = major ? 0.9 : 0.6;
-        ctx.stroke();
-        if (major) {
-          const cardinal = { 0: 'N', 90: 'E', 180: 'S', 270: 'W' }[deg];
-          const q = S([Math.sin(a) * 1.1, Math.cos(a) * 1.1, 0]);
-          if (q)
-            label(cardinal ? 3 : 1, () =>
-              text(q, cardinal ?? String(deg), cardinal ? font(600, 14) : font(500, 11), cardinal ? '#ffffff' : 'rgba(255,255,255,0.78)'),
-            );
-        }
+        const q = S([Math.sin(a), Math.cos(a), 0]);
+        if (!q) continue;
+        const major = deg % 90 === 0;
+        const mid = deg % 30 === 0;
+        ctx.beginPath();
+        ctx.arc(q[0], q[1], major ? 1.6 : mid ? 1.1 : 0.65, 0, 2 * Math.PI);
+        ctx.fillStyle = `rgba(255,255,255,${major ? 0.95 : mid ? 0.7 : 0.35})`;
+        ctx.fill();
+      }
+      ctx.restore();
+      for (const [deg, letter] of [[0, 'N'], [90, 'E'], [180, 'S'], [270, 'W']] as const) {
+        const a = (deg * Math.PI) / 180;
+        const q = S([Math.sin(a) * 1.13, Math.cos(a) * 1.13, 0]);
+        if (q) label(3, () => text(q, letter, font(600, 13), 'rgba(255,255,255,0.92)'));
       }
     }
 
@@ -442,12 +418,12 @@ export function installSunScene(map: MlMap): () => void {
       for (const run of dp.today) {
         const pts = run.map((p) => S(p.dir)).filter((q): q is [number, number] => q !== null);
         if (pts.length < 2) continue;
-        // Soft light under a thin warm path that deepens toward sunset.
+        // A faint warm glow under a fine path that deepens toward sunset.
         polyline(run.map((p) => p.dir));
         ctx.save();
-        ctx.strokeStyle = 'rgba(245,166,35,0.35)';
-        ctx.lineWidth = 6;
-        ctx.filter = 'blur(3px)';
+        ctx.strokeStyle = 'rgba(245,166,35,0.19)';
+        ctx.lineWidth = 3.7;
+        ctx.filter = 'blur(2.1px)';
         ctx.stroke();
         ctx.restore();
         const xs = pts.map((q) => q[0]);
@@ -457,7 +433,7 @@ export function installSunScene(map: MlMap): () => void {
         grad.addColorStop(1, '#ff9a55');
         polyline(run.map((p) => p.dir));
         ctx.strokeStyle = grad;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 0.6;
         ctx.stroke();
       }
       for (const b of [dp.rise, dp.set]) {
@@ -495,6 +471,9 @@ export function installSunScene(map: MlMap): () => void {
       if (aboveHorizon) {
         const el = S([dir[0] * 0.45, dir[1] * 0.45, dir[2] * 0.45]);
         if (el) label(6, () => pill([el[0] + 30, el[1]], `△ ${sun.elevation.toFixed(1)}°`, GLASS, '#ffffff', font(500, 12)));
+      }
+      {
+        // Drawn below the horizon too (under the ring, fully cold), so the sun never vanishes.
         const q = S(dir);
         // Hidden from the viewer, or (in the map view) from someone standing at the pin.
         const from = eyeLevel ? eye : { lat: pin.lat, lng: pin.lng, altitude: ground + EYE_HEIGHT_M };
@@ -581,7 +560,7 @@ export function installSunScene(map: MlMap): () => void {
           lastProbe.push(q);
           if (cover < 0.5) glareAt = q;
           if (hidden) {
-            const note = `${formatClock(s.time, tz)} · behind terrain`;
+            const note = `${formatClock(s.time, tz)} · ${sun.elevationTrue < 0 ? 'below horizon' : 'behind terrain'}`;
             ctx.font = font(600, 14);
             // Left edge just clear of the sun (the pill is placed by its centre).
             const half = (ctx.measureText(note).width + 14) / 2;
