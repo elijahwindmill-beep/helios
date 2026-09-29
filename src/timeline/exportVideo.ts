@@ -22,8 +22,12 @@ import { createAverage, type Average } from './accumulate';
  * is open (shutter angle / 360 of a frame, from the frame's own time), like a film camera.
  */
 
+export type Aspect = '16:9' | '9:16' | '1:1' | '4:3' | '3:2';
+
 export interface ExportOptions {
+  /** The frame's short side (so 1080 at 9:16 is 1080 × 1920). */
   height: 720 | 1080 | 2160;
+  aspect: Aspect;
   fps: 24 | 30 | 60;
   /** The whole view, or the sun scene alone (sun, paths, ring, labels) over transparency. */
   contents: 'full' | 'sun';
@@ -47,9 +51,22 @@ interface ExportState {
   setOptions(o: Partial<ExportOptions>): void;
 }
 
+/** Width over height. */
+const aspectRatio = (a: Aspect) => {
+  const [w, h] = a.split(':').map(Number);
+  return w / h;
+};
+
+/** The export's pixel size: the chosen size on the short side, even numbers for the encoder. */
+export function exportSize(o: Pick<ExportOptions, 'height' | 'aspect'>): { width: number; height: number } {
+  const r = aspectRatio(o.aspect);
+  const even = (v: number) => Math.round(v / 2) * 2;
+  return r >= 1 ? { width: even(o.height * r), height: o.height } : { width: o.height, height: even(o.height / r) };
+}
+
 export const useExport = create<ExportState>()((set) => ({
   phase: 'idle',
-  options: { height: 1080, fps: 30, contents: 'full', motionBlur: false, shutter: 180, samples: 8 },
+  options: { height: 1080, aspect: '16:9', fps: 30, contents: 'full', motionBlur: false, shutter: 180, samples: 8 },
   frame: 0,
   total: 0,
   message: '',
@@ -196,27 +213,29 @@ export async function runExport() {
   const tl = useTimeline.getState();
   const clip = tl.activeClip();
   if (!map || clip.keyframes.length < 2) return;
-  const { height, fps, contents, motionBlur, shutter, samples } = ex.options;
+  const { fps, contents, motionBlur, shutter, samples, aspect } = ex.options;
   const sunOnly = contents === 'sun';
-  const width = Math.round((height * 16) / 9 / 2) * 2;
+  const { width, height } = exportSize(ex.options);
+  const short = ex.options.height;
   const fail = (message: string) => useExport.setState({ phase: 'error', message });
 
   if (!sunOnly) {
     if (typeof VideoEncoder === 'undefined') return fail("This browser can't encode video. Export works in Chrome, Edge, and Safari 16.4 or newer.");
     if (!(await canEncodeVideo('avc', { width, height, bitrate: QUALITY_HIGH }))) {
-      return fail(`This browser or graphics card can't encode ${height}p H.264 video. Try a smaller size.`);
+      return fail(`This browser or graphics card can't encode ${width} × ${height} H.264 video. Try a smaller size.`);
     }
   }
   const gl = map.getCanvas().getContext('webgl2');
   const maxSize = gl ? Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), ...(gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array)) : 4096;
-  if (width > maxSize) return fail(`The graphics card can draw at most ${maxSize} px wide, too small for ${height}p. Try 1080p.`);
+  if (Math.max(width, height) > maxSize) return fail(`The graphics card can draw at most ${maxSize} px across, too small for ${width} × ${height}. Try 1080p.`);
 
   cancelled = false;
   fillPivotHeights();
   const duration = clipDuration(clip);
   const total = Math.round(duration * fps) + 1;
   const base = (clip.name || 'clip').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'clip';
-  const filename = sunOnly ? `zenit-${base}-sun-${height}p${fps}-prores4444.mov` : `zenit-${base}-${height}p${fps}.mp4`;
+  const shape = aspect === '16:9' ? '' : `-${aspect.replace(':', 'x')}`;
+  const filename = sunOnly ? `zenit-${base}-sun-${short}p${fps}${shape}-prores4444.mov` : `zenit-${base}-${short}p${fps}${shape}.mp4`;
   useExport.setState({ phase: 'rendering', frame: 0, total, message: sunOnly ? 'Loading the ProRes encoder (about 32 MB, the first time)' : '', filename });
 
   let prores: ProResWriter | null = null;
@@ -230,11 +249,14 @@ export async function runExport() {
   }
   if (ex.url) URL.revokeObjectURL(ex.url);
 
-  // Size the map to a 16:9 box on screen and draw it at the export resolution.
+  // Size the map to a box of the export's shape, as large as fits the window, and draw it at
+  // the export resolution. On a wide window every shape is as tall as the window, so the
+  // narrower ones are centre crops of the 16:9 view.
   const container = map.getContainer();
   const saved = { style: container.getAttribute('style'), ratio: map.getPixelRatio(), playhead: tl.playhead };
-  const cssW = Math.min(innerWidth, Math.floor((innerHeight * 16) / 9));
-  const cssH = Math.round((cssW * 9) / 16);
+  const ratio = width / height;
+  const cssW = Math.min(innerWidth, Math.floor(innerHeight * ratio));
+  const cssH = Math.round(cssW / ratio);
   document.documentElement.dataset.exporting = '';
   Object.assign(container.style, { position: 'fixed', width: `${cssW}px`, height: `${cssH}px`, left: `${(innerWidth - cssW) / 2}px`, top: `${(innerHeight - cssH) / 2}px`, right: 'auto', bottom: 'auto' });
   map.setPixelRatio(width / cssW);

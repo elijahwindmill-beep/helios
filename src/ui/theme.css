@@ -3087,6 +3087,12 @@ input.insp-at {
 .export-note {
   margin-top: 14px;
 }
+.export-dialog .export-px {
+  float: right;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 500;
+}
 .export-actions {
   display: flex;
   justify-content: flex-end;

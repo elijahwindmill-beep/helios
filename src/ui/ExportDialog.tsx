@@ -1,13 +1,20 @@
 import { useEffect, useRef } from 'react';
 import { useTimeline } from '../store/timeline';
 import { clipDuration } from '../timeline/model';
-import { cancelExport, runExport, useExport, type ExportOptions } from '../timeline/exportVideo';
+import { cancelExport, exportSize, runExport, useExport, type ExportOptions } from '../timeline/exportVideo';
 import { timecode } from './Timeline';
 
 const SIZES: Array<{ h: ExportOptions['height']; label: string }> = [
   { h: 720, label: '720p' },
   { h: 1080, label: '1080p' },
   { h: 2160, label: '4K' },
+];
+const ASPECTS: Array<{ a: ExportOptions['aspect']; title: string }> = [
+  { a: '16:9', title: 'Widescreen' },
+  { a: '9:16', title: 'Vertical: Reels, Shorts, TikTok' },
+  { a: '1:1', title: 'Square' },
+  { a: '4:3', title: 'Classic' },
+  { a: '3:2', title: 'Photo (full-frame sensor shape)' },
 ];
 const RATES: ExportOptions['fps'][] = [24, 30, 60];
 
@@ -28,6 +35,7 @@ export function ExportDialog() {
   const frames = Math.round(duration * ex.options.fps) + 1;
   const o = ex.options;
   const sunOnly = o.contents === 'sun';
+  const px = exportSize(o);
 
   return (
     <>
@@ -54,7 +62,20 @@ export function ExportDialog() {
                 jsDelivr the first time.
               </p>
             )}
-            <span className="hud-label">Size</span>
+            <span className="hud-label">Aspect ratio</span>
+            <div className="segmented" role="group" aria-label="Aspect ratio">
+              {ASPECTS.map((s) => (
+                <button key={s.a} aria-pressed={o.aspect === s.a} title={s.title} onClick={() => ex.setOptions({ aspect: s.a })}>
+                  {s.a}
+                </button>
+              ))}
+            </div>
+            {o.aspect !== '16:9' && (
+              <p className="muted export-note">The centre of the view, cropped to {o.aspect}: keep what matters near the middle of the screen.</p>
+            )}
+            <span className="hud-label">
+              Size <span className="mono export-px">{px.width} × {px.height}</span>
+            </span>
             <div className="segmented" role="group" aria-label="Size">
               {SIZES.map((s) => (
                 <button key={s.h} aria-pressed={ex.options.height === s.h} onClick={() => ex.setOptions({ height: s.h })}>
